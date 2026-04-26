@@ -1,4 +1,4 @@
-local DEFAULT_BASE_URL = ""
+local DEFAULT_BASE_URL = "https://github.com/buhayhayahay332-lang/Bloxstrike#"
 
 local function normalizePath(path)
     return tostring(path or ""):gsub("\\", "/")
