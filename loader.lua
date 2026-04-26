@@ -4,6 +4,42 @@ local function normalizePath(path)
     return tostring(path or ""):gsub("\\", "/")
 end
 
+local function sanitizeBaseUrl(url)
+    local text = tostring(url or ""):gsub("%s+", "")
+    text = text:gsub("#.*$", "")
+    text = text:gsub("%?.*$", "")
+    text = text:gsub("/+$", "")
+
+    local owner, repo, branch, rest
+
+    owner, repo, branch, rest = text:match("^https://github%.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)$")
+    if owner and repo and branch then
+        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. (rest ~= "" and "/" .. rest or "")
+    end
+
+    owner, repo, branch, rest = text:match("^https://github%.com/([^/]+)/([^/]+)/raw/([^/]+)/(.*)$")
+    if owner and repo and branch then
+        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. (rest ~= "" and "/" .. rest or "")
+    end
+
+    owner, repo, branch, rest = text:match("^https://raw%.githubusercontent%.com/([^/]+)/([^/]+)/([^/]+)/(.*)$")
+    if owner and repo and branch then
+        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. (rest ~= "" and "/" .. rest or "")
+    end
+
+    owner, repo, branch = text:match("^https://github%.com/([^/]+)/([^/]+)/tree/([^/]+)$")
+    if owner and repo and branch then
+        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch
+    end
+
+    owner, repo = text:match("^https://github%.com/([^/]+)/([^/]+)$")
+    if owner and repo then
+        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/main"
+    end
+
+    return text
+end
+
 local function joinPath(...)
     local parts = { ... }
     local out = {}
@@ -78,8 +114,9 @@ local function kickOnFatal(err)
 end
 
 local env = getEnv()
-local baseUrl = env.BloxtrikeBaseUrl or DEFAULT_BASE_URL
+local baseUrl = sanitizeBaseUrl(env.BloxtrikeBaseUrl or DEFAULT_BASE_URL)
 assert(type(baseUrl) == "string" and baseUrl ~= "", "Set getgenv().BloxtrikeBaseUrl before running loader.lua, or edit DEFAULT_BASE_URL inside loader.lua.")
+assert(baseUrl:find("^https://raw%.githubusercontent%.com/"), "Base URL must resolve to raw.githubusercontent.com")
 
 local httpGet = getHttpGet()
 local files = {
@@ -109,8 +146,9 @@ local ok, result = xpcall(function()
         local url = joinPath(baseUrl, relativePath)
         local body = httpGet(url)
         assert(type(body) == "string" and body ~= "", "Failed to fetch: " .. url)
-        assert(not body:find("<!DOCTYPE html>", 1, true), "Non-raw response for: " .. relativePath)
-        assert(not body:find("<html", 1, true), "HTML returned for: " .. relativePath)
+        local lowered = body:sub(1, 256):lower()
+        assert(not lowered:find("<!doctype html>", 1, true), "Non-raw response for: " .. relativePath)
+        assert(not lowered:find("<html", 1, true), "HTML returned for: " .. relativePath)
         assert(body ~= "404: Not Found", "Missing file: " .. relativePath)
         sources[relativePath] = body
     end
