@@ -19,10 +19,10 @@ function ESP.new(context)
     self.cache = {}
     self.settings = {
         enabled = false,
-        showBox = true,
-        showName = true,
-        showHealth = true,
-        showDistance = true,
+        showBox = false,
+        showName = false,
+        showHealth = false,
+        showDistance = false,
         showSkeleton = false,
         showHeadDot = false,
         showTracers = false,
