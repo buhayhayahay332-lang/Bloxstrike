@@ -463,7 +463,7 @@ end))
 window:switchTab(configTab)
 window:addConfigManager("default")
 
-window:notify("Bloxtrike", "Modular build loaded.", nil, false)
+window:notify("Bloxtrike", "loaded.", nil, false)
 
 return {
     window = window,
