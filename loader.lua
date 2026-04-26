@@ -115,7 +115,7 @@ end
 
 local env = getEnv()
 local baseUrl = sanitizeBaseUrl(env.BloxtrikeBaseUrl or DEFAULT_BASE_URL)
-assert(type(baseUrl) == "string" and baseUrl ~= "", "Set getgenv().BloxtrikeBaseUrl before running loader.lua, or edit DEFAULT_BASE_URL inside loader.lua.")
+assert(type(baseUrl) == "string" and baseUrl ~= "", "Set getgenv().BloxtrikeBaseUrl before running loader.lua")
 assert(baseUrl:find("^https://raw%.githubusercontent%.com/"), "Base URL must resolve to raw.githubusercontent.com")
 
 local httpGet = getHttpGet()

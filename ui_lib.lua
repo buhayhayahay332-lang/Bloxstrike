@@ -116,6 +116,48 @@ local function decodeKeyCode(value)
 	return nil
 end
 
+local function clampByte(value)
+	value = tonumber(value) or 0
+	return math.clamp(math.floor(value + 0.5), 0, 255)
+end
+
+local function color3ToRgb(color)
+	local target = typeof(color) == "Color3" and color or Color3.new(1, 1, 1)
+	return clampByte(target.R * 255), clampByte(target.G * 255), clampByte(target.B * 255)
+end
+
+local function color3ToHex(color)
+	local r, g, b = color3ToRgb(color)
+	return string.format("#%02X%02X%02X", r, g, b)
+end
+
+local function getReadableTextColor(color)
+	local r, g, b = color3ToRgb(color)
+	local brightness = (r * 0.299) + (g * 0.587) + (b * 0.114)
+	if brightness >= 150 then
+		return Color3.new(0, 0, 0)
+	end
+	return Color3.new(1, 1, 1)
+end
+
+local function normalizeColor3(value, fallback)
+	if typeof(value) == "Color3" then
+		return value
+	end
+	if type(value) == "table" then
+		local r = value.r or value.R or value[1]
+		local g = value.g or value.G or value[2]
+		local b = value.b or value.B or value[3]
+		if r ~= nil and g ~= nil and b ~= nil then
+			if r > 1 or g > 1 or b > 1 then
+				return Color3.fromRGB(clampByte(r), clampByte(g), clampByte(b))
+			end
+			return Color3.new(math.clamp(tonumber(r) or 0, 0, 1), math.clamp(tonumber(g) or 0, 0, 1), math.clamp(tonumber(b) or 0, 0, 1))
+		end
+	end
+	return fallback or Color3.new(1, 1, 1)
+end
+
 local function make(className, props)
 	local obj = Instance.new(className)
 	for k, v in pairs(props or {}) do
@@ -1217,6 +1259,10 @@ function LibClass:_encodeConfigValue(entry, value)
 		local keyCode = decodeKeyCode(value)
 		return keyCode and keyCode.Name or nil
 	end
+	if entry.type == "color" then
+		local r, g, b = color3ToRgb(value)
+		return { r = r, g = g, b = b }
+	end
 	return value
 end
 
@@ -1238,6 +1284,9 @@ function LibClass:_decodeConfigValue(entry, value)
 	end
 	if entry.type == "keybind" then
 		return decodeKeyCode(value)
+	end
+	if entry.type == "color" then
+		return normalizeColor3(value, entry.default)
 	end
 	return value
 end
@@ -2107,6 +2156,318 @@ function LibClass:addDropdown(name, options, default, callback)
 			optionConns = {}
 			optionConnSet = {}
 			panel:Destroy()
+		end,
+	}
+end
+
+function LibClass:addColorPicker(name, defaultColor, callback)
+	local parent, _, layoutOrder = self:_getTarget()
+	local row = makeRow(parent, layoutOrder)
+	local currentColor = normalizeColor3(defaultColor, Color3.fromRGB(255, 255, 255))
+	local isOpen = false
+
+	local inner = make("Frame", {
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Parent = row,
+	})
+	make("UIPadding", {
+		PaddingLeft = UDim.new(0, 12),
+		PaddingRight = UDim.new(0, 12),
+		Parent = inner,
+	})
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = inner,
+	})
+
+	make("TextLabel", {
+		Size = UDim2.new(0.5, 0, 0, 26),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Text = name,
+		TextColor3 = Color3.fromRGB(220, 220, 220),
+		TextSize = 12,
+		Font = Enum.Font.Gotham,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextWrapped = true,
+		LayoutOrder = 1,
+		Parent = inner,
+	})
+
+	local colorBtn = make("TextButton", {
+		Size = UDim2.new(0.5, -8, 0, 24),
+		BackgroundColor3 = currentColor,
+		BackgroundTransparency = 0.1,
+		Text = color3ToHex(currentColor),
+		TextColor3 = getReadableTextColor(currentColor),
+		TextSize = 11,
+		Font = Enum.Font.GothamBold,
+		BorderSizePixel = 0,
+		LayoutOrder = 2,
+		Parent = inner,
+	})
+	addCorner(colorBtn, 7)
+
+	local panel = make("Frame", {
+		Size = UDim2.new(0, 220, 0, 0),
+		BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+		BackgroundTransparency = 0.08,
+		BorderSizePixel = 0,
+		ZIndex = 30,
+		Visible = false,
+		Parent = self.screenGui,
+	})
+	addCorner(panel, 8)
+	make("UIStroke", {
+		Color = Color3.fromRGB(50, 50, 50),
+		Thickness = 1,
+		Parent = panel,
+	})
+
+	local panelLayout = make("UIListLayout", {
+		Padding = UDim.new(0, 6),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = panel,
+	})
+	make("UIPadding", {
+		PaddingTop = UDim.new(0, 8),
+		PaddingBottom = UDim.new(0, 8),
+		PaddingLeft = UDim.new(0, 8),
+		PaddingRight = UDim.new(0, 8),
+		Parent = panel,
+	})
+
+	local preview = make("Frame", {
+		Size = UDim2.new(1, 0, 0, 32),
+		BackgroundColor3 = currentColor,
+		BorderSizePixel = 0,
+		LayoutOrder = 1,
+		Parent = panel,
+	})
+	addCorner(preview, 7)
+
+	local previewText = make("TextLabel", {
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		Text = color3ToHex(currentColor),
+		TextColor3 = getReadableTextColor(currentColor),
+		TextSize = 12,
+		Font = Enum.Font.GothamBold,
+		Parent = preview,
+	})
+
+	local channels = {}
+
+	local function updateButtonVisuals()
+		colorBtn.BackgroundColor3 = currentColor
+		colorBtn.Text = color3ToHex(currentColor)
+		colorBtn.TextColor3 = getReadableTextColor(currentColor)
+		preview.BackgroundColor3 = currentColor
+		previewText.Text = color3ToHex(currentColor)
+		previewText.TextColor3 = getReadableTextColor(currentColor)
+	end
+
+	local function updatePanelPosition()
+		local ap = colorBtn.AbsolutePosition
+		local as = colorBtn.AbsoluteSize
+		local vp = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+		local panelH = panel.AbsoluteSize.Y
+		local yBelow = ap.Y + as.Y + 2
+		local yAbove = ap.Y - panelH - 2
+		local finalY = (yBelow + panelH > vp.Y) and yAbove or yBelow
+		local finalX = math.clamp(ap.X, 4, math.max(vp.X - panel.AbsoluteSize.X - 4, 4))
+		panel.Position = UDim2.new(0, finalX, 0, finalY)
+	end
+
+	local function setColorValue(value, fireCallback)
+		currentColor = normalizeColor3(value, currentColor)
+		updateButtonVisuals()
+		for _, updateChannel in pairs(channels) do
+			updateChannel(currentColor)
+		end
+		if fireCallback and callback then
+			pcall(callback, currentColor)
+		end
+	end
+
+	local function buildChannelRow(layoutOrderValue, labelText, componentKey, accentColor)
+		local channelRow = make("Frame", {
+			Size = UDim2.new(1, 0, 0, 36),
+			BackgroundTransparency = 1,
+			LayoutOrder = layoutOrderValue,
+			Parent = panel,
+		})
+
+		make("TextLabel", {
+			Size = UDim2.new(0, 18, 0, 16),
+			Position = UDim2.new(0, 0, 0, 0),
+			BackgroundTransparency = 1,
+			Text = labelText,
+			TextColor3 = Color3.fromRGB(220, 220, 220),
+			TextSize = 11,
+			Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = channelRow,
+		})
+
+		local valueLabel = make("TextLabel", {
+			Size = UDim2.new(0, 36, 0, 16),
+			Position = UDim2.new(1, -36, 0, 0),
+			BackgroundTransparency = 1,
+			Text = "0",
+			TextColor3 = Color3.fromRGB(160, 160, 160),
+			TextSize = 11,
+			Font = Enum.Font.Gotham,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			Parent = channelRow,
+		})
+
+		local track = make("Frame", {
+			Size = UDim2.new(1, 0, 0, 6),
+			Position = UDim2.new(0, 0, 0, 24),
+			BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+			BorderSizePixel = 0,
+			Parent = channelRow,
+		})
+		addCorner(track, 3)
+
+		local fill = make("Frame", {
+			Size = UDim2.new(0, 0, 1, 0),
+			BackgroundColor3 = accentColor,
+			BorderSizePixel = 0,
+			Parent = track,
+		})
+		addCorner(fill, 3)
+
+		local knob = make("Frame", {
+			Size = UDim2.new(0, 12, 0, 12),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0, 0, 0.5, 0),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BorderSizePixel = 0,
+			ZIndex = 31,
+			Parent = track,
+		})
+		addCorner(knob, 6)
+
+		local dragging = false
+
+		local function getComponentValue(color)
+			local r, g, b = color3ToRgb(color)
+			if componentKey == "r" then
+				return r
+			elseif componentKey == "g" then
+				return g
+			end
+			return b
+		end
+
+		local function applyVisual(rawValue)
+			local channelValue = clampByte(rawValue)
+			local ratio = channelValue / 255
+			fill.Size = UDim2.new(ratio, 0, 1, 0)
+			knob.Position = UDim2.new(ratio, 0, 0.5, 0)
+			valueLabel.Text = tostring(channelValue)
+		end
+
+		local function applyFromX(x)
+			local ratio = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
+			local nextValue = clampByte(ratio * 255)
+			local r, g, b = color3ToRgb(currentColor)
+			if componentKey == "r" then
+				r = nextValue
+			elseif componentKey == "g" then
+				g = nextValue
+			else
+				b = nextValue
+			end
+			setColorValue(Color3.fromRGB(r, g, b), true)
+		end
+
+		self._conn(ui.InputChanged, function(inp)
+			if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
+				applyFromX(inp.Position.X)
+			end
+		end)
+		self._conn(ui.InputEnded, function(inp)
+			if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end)
+		self._conn(track.InputBegan, function(inp)
+			if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				applyFromX(inp.Position.X)
+			end
+		end)
+
+		channels[componentKey] = function(color)
+			applyVisual(getComponentValue(color))
+		end
+	end
+
+	buildChannelRow(2, "R", "r", Color3.fromRGB(255, 90, 90))
+	buildChannelRow(3, "G", "g", Color3.fromRGB(90, 255, 140))
+	buildChannelRow(4, "B", "b", Color3.fromRGB(90, 170, 255))
+
+	self._conn(panelLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+		if not panel.Parent then return end
+		panel.Size = UDim2.new(0, 220, 0, panelLayout.AbsoluteContentSize.Y + 16)
+		if isOpen then
+			updatePanelPosition()
+		end
+	end)
+
+	local function closePanel()
+		isOpen = false
+		panel.Visible = false
+	end
+
+	self._conn(colorBtn.MouseButton1Click, function()
+		if isOpen then
+			closePanel()
+		else
+			isOpen = true
+			panel.Visible = true
+			updatePanelPosition()
+		end
+	end)
+	self._conn(colorBtn:GetPropertyChangedSignal("AbsolutePosition"), function()
+		if isOpen then
+			updatePanelPosition()
+		end
+	end)
+	self._conn(colorBtn:GetPropertyChangedSignal("AbsoluteSize"), function()
+		if isOpen then
+			updatePanelPosition()
+		end
+	end)
+
+	updateButtonVisuals()
+	setColorValue(currentColor, false)
+
+	if self._activeTab then
+		table.insert(self._activeTab.items, row)
+	end
+	self:resize()
+	self:_registerConfigControl(name, "color", currentColor, function()
+		return currentColor
+	end, function(v, fireCallback)
+		setColorValue(v, fireCallback == true)
+	end)
+
+	return {
+		get = function() return currentColor end,
+		set = function(v) setColorValue(v, false) end,
+		destroy = function()
+			closePanel()
+			if panel and panel.Parent then
+				panel:Destroy()
+			end
 		end,
 	}
 end
