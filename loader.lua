@@ -237,8 +237,8 @@ local files = {
     "src/features/skins/Skinchanger.lua",
     "src/features/visuals/ESP.lua",
     "src/features/visuals/Chams.lua",
-    "src/features/visuals/BulletTracers.lua",
-    "src/features/visuals/ParticleEffects.lua",
+    --"src/features/visuals/BulletTracers.lua",
+    --"src/features/visuals/ParticleEffects.lua",
     "src/features/visuals/KillEffects.lua",
     "src/features/visuals/WorldEffects.lua",
 }
