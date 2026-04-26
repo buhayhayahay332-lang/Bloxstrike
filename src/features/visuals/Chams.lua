@@ -14,7 +14,7 @@ function Chams.new(context)
         rainbow = false,
         rainbowSpeed = 2.0,
         playerEnabled = false,
-        playerColor = Color3.fromRGB(255, 0, 255),
+        playerColor = Color3.fromRGB(255, 0, 0),
         playerFillTransparency = 0.7,
         playerOutlineTransparency = 0,
         weaponEnabled = false,

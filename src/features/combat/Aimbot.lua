@@ -22,7 +22,7 @@ function Aimbot.new(context)
         local ok, circle = pcall(Drawing.new, "Circle")
         if ok and circle then
             circle.Filled = false
-            circle.Color = Color3.fromRGB(255, 255, 255)
+            circle.Color = Color3.fromRGB(0, 255, 255)
             circle.Visible = false
             circle.Thickness = 1
             self.fovCircle = circle

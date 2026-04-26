@@ -113,8 +113,8 @@ local Hitbox = loadLocal("src/features/combat/Hitbox.lua")
 local BunnyHop = loadLocal("src/features/movement/BunnyHop.lua")
 local ESP = loadLocal("src/features/visuals/ESP.lua")
 local Chams = loadLocal("src/features/visuals/Chams.lua")
-local BulletTracers = loadLocal("src/features/visuals/BulletTracers.lua")
-local ParticleEffects = loadLocal("src/features/visuals/ParticleEffects.lua")
+--local BulletTracers = loadLocal("src/features/visuals/BulletTracers.lua")
+--local ParticleEffects = loadLocal("src/features/visuals/ParticleEffects.lua")
 local KillEffects = loadLocal("src/features/visuals/KillEffects.lua")
 local WorldEffects = loadLocal("src/features/visuals/WorldEffects.lua")
 local Skinchanger = loadLocal("src/features/skins/Skinchanger.lua")
@@ -141,8 +141,8 @@ local features = {
     bunnyHop = BunnyHop.new(context),
     esp = ESP.new(context),
     chams = Chams.new(context),
-    bulletTracers = BulletTracers.new(context),
-    particleEffects = ParticleEffects.new(context),
+   -- bulletTracers = BulletTracers.new(context),
+    --particleEffects = ParticleEffects.new(context),
     killEffects = KillEffects.new(context),
     worldEffects = WorldEffects.new(context),
     skinchanger = Skinchanger.new(context),
@@ -401,7 +401,7 @@ window:addColorPicker("Weapon Chams Color", Color3.fromRGB(0, 255, 255), safeUi(
     features.chams:SetSetting("weaponColor", value)
 end))
 
-window:addSection("Bullet Tracers")
+--[[window:addSection("Bullet Tracers")
 window:addToggle("Bullet Tracers Enabled", false, safeUi("Bullet Tracers Enabled", function(value)
     features.bulletTracers:SetSetting("enabled", value)
 end))
@@ -419,9 +419,9 @@ window:addSlider("Bullet Tracer Thickness", 0.1, 1, 0.2, 0.05, safeUi("Bullet Tr
 end))
 window:addColorPicker("Bullet Tracer Color", Color3.fromRGB(0, 255, 255), safeUi("Bullet Tracer Color", function(value)
     features.bulletTracers:SetSetting("color", value)
-end))
+end))]]
 
-window:addSection("Particle Effects")
+--[[window:addSection("Particle Effects")
 window:addToggle("Particle Effects Enabled", false, safeUi("Particle Effects Enabled", function(value)
     features.particleEffects:SetSetting("enabled", value)
 end))
@@ -436,7 +436,7 @@ window:addDropdown("Particle Style", { "Spark", "Smoke", "Fire", "Explosion", "M
 end))
 window:addColorPicker("Particle Color", Color3.fromRGB(255, 100, 0), safeUi("Particle Color", function(value)
     features.particleEffects:SetSetting("color", value)
-end))
+end))]]
 
 window:addSection("Kill Effects")
 window:addToggle("Kill Effects Enabled", false, safeUi("Kill Effects Enabled", function(value)
