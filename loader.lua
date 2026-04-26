@@ -54,6 +54,11 @@ local function joinPath(...)
     return table.concat(out, "/")
 end
 
+local function getFileName(path)
+    local normalized = normalizePath(path)
+    return normalized:match("([^/]+)$") or normalized
+end
+
 local function getEnv()
     if getgenv then
         return getgenv()
@@ -84,6 +89,104 @@ local function getHttpGet()
     end
 
     error("No HTTP request function is available in this executor.")
+end
+
+local function getGuiParent()
+    local players = game:GetService("Players")
+    local coreGui = game:GetService("CoreGui")
+    local localPlayer = players.LocalPlayer
+    local parent = (gethui and gethui()) or coreGui
+
+    local ok = pcall(function()
+        local probe = Instance.new("ScreenGui")
+        probe.Parent = coreGui
+        probe:Destroy()
+    end)
+
+    if not ok and localPlayer then
+        parent = localPlayer:WaitForChild("PlayerGui")
+    end
+
+    return parent
+end
+
+local function createLoadingOverlay(message)
+    local guiParent = getGuiParent()
+    local existing = guiParent:FindFirstChild("BLOXTRIKE_BOOTSTRAP_LOADING")
+    if existing then
+        existing:Destroy()
+    end
+
+    local loadingGui = Instance.new("ScreenGui")
+    loadingGui.Name = "BLOXTRIKE_BOOTSTRAP_LOADING"
+    loadingGui.ResetOnSpawn = false
+    loadingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    loadingGui.DisplayOrder = 2147483647
+    loadingGui.Parent = guiParent
+
+    local card = Instance.new("Frame")
+    card.AnchorPoint = Vector2.new(0.5, 0.5)
+    card.Position = UDim2.fromScale(0.5, 0.5)
+    card.Size = UDim2.new(0, 360, 0, 92)
+    card.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+    card.BackgroundTransparency = 0.15
+    card.BorderSizePixel = 0
+    card.Parent = loadingGui
+
+    local cardCorner = Instance.new("UICorner")
+    cardCorner.CornerRadius = UDim.new(0, 12)
+    cardCorner.Parent = card
+
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Color = Color3.fromRGB(65, 65, 65)
+    cardStroke.Thickness = 1
+    cardStroke.Parent = card
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Position = UDim2.new(0, 16, 0, 16)
+    titleLabel.Size = UDim2.new(1, -32, 0, 20)
+    titleLabel.Text = "Bloxtrike"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 14
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = card
+
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Position = UDim2.new(0, 16, 0, 42)
+    statusLabel.Size = UDim2.new(1, -32, 0, 34)
+    statusLabel.Text = tostring(message or "Loading Bloxtrike...")
+    statusLabel.TextColor3 = Color3.fromRGB(205, 205, 205)
+    statusLabel.TextSize = 12
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.TextWrapped = true
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statusLabel.TextYAlignment = Enum.TextYAlignment.Top
+    statusLabel.Parent = card
+
+    pcall(function()
+        if syn and syn.protect_gui then
+            syn.protect_gui(loadingGui)
+        elseif protect_gui then
+            protect_gui(loadingGui)
+        end
+    end)
+
+    return {
+        gui = loadingGui,
+        setText = function(text)
+            if statusLabel and statusLabel.Parent then
+                statusLabel.Text = tostring(text or "Loading Bloxtrike...")
+            end
+        end,
+        dismiss = function()
+            if loadingGui and loadingGui.Parent then
+                loadingGui:Destroy()
+            end
+        end,
+    }
 end
 
 local function kickOnFatal(err)
@@ -119,6 +222,7 @@ assert(type(baseUrl) == "string" and baseUrl ~= "", "Set getgenv().BloxtrikeBase
 assert(baseUrl:find("^https://raw%.githubusercontent%.com/"), "Base URL must resolve to raw.githubusercontent.com")
 
 local httpGet = getHttpGet()
+local loadingOverlay = createLoadingOverlay("Fetching script files...")
 local files = {
     "main.lua",
     "ui_lib.lua",
@@ -142,19 +246,22 @@ local files = {
 
 local ok, result = xpcall(function()
     local sources = {}
-    for _, relativePath in ipairs(files) do
+    for index, relativePath in ipairs(files) do
+        local fileName = getFileName(relativePath)
+        loadingOverlay.setText(string.format("Fetching %s (%d/%d)...", fileName, index, #files))
         local url = joinPath(baseUrl, relativePath)
         local body = httpGet(url)
-        assert(type(body) == "string" and body ~= "", "Failed to fetch: " .. url)
+        assert(type(body) == "string" and body ~= "", "Failed to fetch: " .. fileName)
         local lowered = body:sub(1, 256):lower()
-        assert(not lowered:find("<!doctype html>", 1, true), "Non-raw response for: " .. relativePath)
-        assert(not lowered:find("<html", 1, true), "HTML returned for: " .. relativePath)
-        assert(body ~= "404: Not Found", "Missing file: " .. relativePath)
+        assert(not lowered:find("<!doctype html>", 1, true), "Non-raw response for: " .. fileName)
+        assert(not lowered:find("<html", 1, true), "HTML returned for: " .. fileName)
+        assert(body ~= "404: Not Found", "Missing file: " .. fileName)
         sources[relativePath] = body
     end
 
     env.BloxtrikeBaseUrl = baseUrl
     env.BloxtrikeModuleSources = sources
+    loadingOverlay.dismiss()
 
     local mainChunk = assert(loadstring(sources["main.lua"], "@loader/main.lua"))
     return mainChunk()
@@ -167,6 +274,9 @@ end, function(err)
 end)
 
 if not ok then
+    pcall(function()
+        loadingOverlay.dismiss()
+    end)
     kickOnFatal(result)
 end
 
