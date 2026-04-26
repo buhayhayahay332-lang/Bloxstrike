@@ -1,4 +1,4 @@
-local DEFAULT_BASE_URL = "https://github.com/buhayhayahay332-lang/Bloxstrike#"
+local DEFAULT_BASE_URL = "https://raw.githubusercontent.com/buhayhayahay332-lang/Bloxstrike"
 
 local function normalizePath(path)
     return tostring(path or ""):gsub("\\", "/")
@@ -51,18 +51,19 @@ local function getHttpGet()
 end
 
 local function kickOnFatal(err)
-    local message = "[Bloxtrike] Loader error: " .. tostring(err)
-    warn(message)
+    local detailedMessage = "[Bloxtrike] Loader error: " .. tostring(err)
+    local shortMessage = "[Bloxtrike] Loader error"
+    warn(detailedMessage)
 
     local players = game and game:GetService("Players")
     local player = players and players.LocalPlayer
     if player then
         pcall(function()
-            player:Kick(message)
+            player:Kick(shortMessage)
         end)
     end
 
-    error(message, 0)
+    error(shortMessage, 0)
 end
 
 local env = getEnv()

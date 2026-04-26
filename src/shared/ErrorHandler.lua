@@ -27,14 +27,16 @@ function ErrorHandler:Fail(label, err)
     end
 
     self.failed = true
-    local message = "[Bloxtrike] " .. self:_format(label, err)
+    local detailedMessage = "[Bloxtrike] " .. self:_format(label, err)
+    local shortLabel = label and tostring(label) or "Runtime Error"
+    local shortMessage = "[Bloxtrike] " .. shortLabel
 
-    warn(message)
+    warn(detailedMessage)
 
     local player = self.services and self.services.Players and self.services.Players.LocalPlayer
     if player then
         pcall(function()
-            player:Kick(message)
+            player:Kick(shortMessage)
         end)
     end
 end
