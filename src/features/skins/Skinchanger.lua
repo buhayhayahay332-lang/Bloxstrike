@@ -201,16 +201,33 @@ function Skinchanger:_updateInventoryNames()
     local meleeSlot = inventory:FindFirstChild("Melee")
     if meleeSlot and self.config.knifeChangerEnabled then
         local weapon = meleeSlot:FindFirstChild("Weapon")
-        local label = weapon and weapon:FindFirstChild("WeaponName")
-        if label and label:IsA("TextLabel") then
-            local knifeModel = self.config.knifeModel
-            local selectedSkin = self.config.weaponSkins[knifeModel]
-            local prefix = utf8.char(9733) .. " " .. knifeModel
+        if weapon then
+            local label = weapon:FindFirstChild("WeaponName")
+            if label and label:IsA("TextLabel") then
+                local knifeModel = self.config.knifeModel
+                local selectedSkin = self.config.weaponSkins[knifeModel]
+                local prefix = utf8.char(9733) .. " " .. knifeModel
 
-            if selectedSkin and selectedSkin ~= "Default" then
-                label.Text = prefix .. " | " .. selectedSkin
-            else
-                label.Text = prefix
+                if selectedSkin and selectedSkin ~= "Default" then
+                    label.Text = prefix .. " | " .. selectedSkin
+                else
+                    label.Text = prefix
+                end
+            end
+
+            local meleeImage = weapon:FindFirstChild("Melee")
+            if meleeImage and meleeImage:IsA("ImageLabel") then
+                pcall(function()
+                    local knifeModel = self.config.knifeModel
+                    local weaponDb = self.repStore:FindFirstChild("Database")
+                        and self.repStore.Database:FindFirstChild("Custom")
+                        and self.repStore.Database.Custom:FindFirstChild("Weapons")
+                    local weaponModule = weaponDb and weaponDb:FindFirstChild(knifeModel)
+                    local weaponData = weaponModule and safeRequire(weaponModule)
+                    if type(weaponData) == "table" and weaponData.Icon then
+                        meleeImage.Image = weaponData.Icon
+                    end
+                end)
             end
         end
     end
