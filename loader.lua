@@ -90,6 +90,7 @@ local files = {
     "src/features/visuals/WorldEffects.lua",
 }
 
+
 local ok, result = xpcall(function()
     local sources = {}
     for _, relativePath in ipairs(files) do
