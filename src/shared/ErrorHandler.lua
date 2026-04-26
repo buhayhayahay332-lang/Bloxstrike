@@ -3,6 +3,31 @@ ErrorHandler.__index = ErrorHandler
 
 local unpackValues = unpack or table.unpack
 
+local function sanitizeOneLine(text, maxLen)
+    local line = tostring(text or ""):gsub("[\r\n]+", " ")
+    line = line:gsub("%s+", " ")
+    line = line:gsub("[^\32-\126]", "?")
+    line = line:gsub("^%s+", ""):gsub("%s+$", "")
+    maxLen = maxLen or 120
+    if #line > maxLen then
+        line = line:sub(1, maxLen - 3) .. "..."
+    end
+    return line
+end
+
+local function compactReason(err)
+    local text = tostring(err or "")
+    local firstLine = text:match("([^\r\n]+)") or text
+    firstLine = firstLine:gsub("^%[Bloxtrike%]%s*", "")
+    firstLine = firstLine:gsub("^.-:%s*", function(prefix)
+        if prefix:find(":%d+:") then
+            return prefix
+        end
+        return ""
+    end)
+    return sanitizeOneLine(firstLine)
+end
+
 function ErrorHandler.new(services)
     return setmetatable({
         services = services,
@@ -28,8 +53,12 @@ function ErrorHandler:Fail(label, err)
 
     self.failed = true
     local detailedMessage = "[Bloxtrike] " .. self:_format(label, err)
-    local shortLabel = label and tostring(label) or "Runtime Error"
+    local shortLabel = sanitizeOneLine(label or "Runtime Error", 50)
+    local reason = compactReason(err)
     local shortMessage = "[Bloxtrike] " .. shortLabel
+    if reason ~= "" then
+        shortMessage = shortMessage .. " | " .. reason
+    end
 
     warn(detailedMessage)
 

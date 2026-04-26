@@ -52,7 +52,18 @@ end
 
 local function kickOnFatal(err)
     local detailedMessage = "[Bloxtrike] Loader error: " .. tostring(err)
+    local firstLine = tostring(err or ""):match("([^\r\n]+)") or tostring(err or "")
+    firstLine = firstLine:gsub("[^\32-\126]", "?")
+    firstLine = firstLine:gsub("%s+", " ")
+    firstLine = firstLine:gsub("^%s+", ""):gsub("%s+$", "")
+    if #firstLine > 120 then
+        firstLine = firstLine:sub(1, 117) .. "..."
+    end
+
     local shortMessage = "[Bloxtrike] Loader error"
+    if firstLine ~= "" then
+        shortMessage = shortMessage .. " | " .. firstLine
+    end
     warn(detailedMessage)
 
     local players = game and game:GetService("Players")
@@ -98,6 +109,9 @@ local ok, result = xpcall(function()
         local url = joinPath(baseUrl, relativePath)
         local body = httpGet(url)
         assert(type(body) == "string" and body ~= "", "Failed to fetch: " .. url)
+        assert(not body:find("<!DOCTYPE html>", 1, true), "Non-raw response for: " .. relativePath)
+        assert(not body:find("<html", 1, true), "HTML returned for: " .. relativePath)
+        assert(body ~= "404: Not Found", "Missing file: " .. relativePath)
         sources[relativePath] = body
     end
 
