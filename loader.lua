@@ -1,62 +1,8 @@
-local DEFAULT_BASE_URL = "https://github.com/buhayhayahay332-lang/Bloxstrike"
-
-local function normalizePath(path)
-    return tostring(path or ""):gsub("\\", "/")
-end
-
-local function sanitizeBaseUrl(url)
-    local text = tostring(url or ""):gsub("%s+", "")
-    text = text:gsub("#.*$", "")
-    text = text:gsub("%?.*$", "")
-    text = text:gsub("/+$", "")
-
-    local owner, repo, branch, rest
-
-    owner, repo, branch, rest = text:match("^https://github%.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)$")
-    if owner and repo and branch then
-        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. (rest ~= "" and "/" .. rest or "")
-    end
-
-    owner, repo, branch, rest = text:match("^https://github%.com/([^/]+)/([^/]+)/raw/([^/]+)/(.*)$")
-    if owner and repo and branch then
-        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. (rest ~= "" and "/" .. rest or "")
-    end
-
-    owner, repo, branch, rest = text:match("^https://raw%.githubusercontent%.com/([^/]+)/([^/]+)/([^/]+)/(.*)$")
-    if owner and repo and branch then
-        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. (rest ~= "" and "/" .. rest or "")
-    end
-
-    owner, repo, branch = text:match("^https://github%.com/([^/]+)/([^/]+)/tree/([^/]+)$")
-    if owner and repo and branch then
-        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch
-    end
-
-    owner, repo = text:match("^https://github%.com/([^/]+)/([^/]+)$")
-    if owner and repo then
-        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/main"
-    end
-
-    return text
-end
-
-local function joinPath(...)
-    local parts = { ... }
-    local out = {}
-
-    for _, part in ipairs(parts) do
-        local text = normalizePath(part):gsub("^/+", ""):gsub("/+$", "")
-        if text ~= "" then
-            out[#out + 1] = text
-        end
-    end
-
-    return table.concat(out, "/")
-end
+local DEFAULT_BASE_URL = "https://raw.githubusercontent.com/buhayhayahay332-lang/Bloxstrike/main"
 
 local function getFileName(path)
-    local normalized = normalizePath(path)
-    return normalized:match("([^/]+)$") or normalized
+    local text = tostring(path or "")
+    return text:match("([^/\\]+)$") or text
 end
 
 local function getHttpGet()
@@ -208,9 +154,7 @@ local function kickOnFatal(err)
     error(shortMessage, 0)
 end
 
-local baseUrl = sanitizeBaseUrl(DEFAULT_BASE_URL)
-assert(type(baseUrl) == "string" and baseUrl ~= "", "DEFAULT_BASE_URL must not be empty")
-assert(baseUrl:find("^https://raw%.githubusercontent%.com/"), "Base URL must resolve to raw.githubusercontent.com")
+assert(type(DEFAULT_BASE_URL) == "string" and DEFAULT_BASE_URL ~= "", "DEFAULT_BASE_URL must not be empty")
 
 local httpGet = getHttpGet()
 local loadingOverlay = createLoadingOverlay("Fetching script files...")
@@ -240,7 +184,7 @@ local ok, result = xpcall(function()
     for index, relativePath in ipairs(files) do
         local fileName = getFileName(relativePath)
         loadingOverlay.setText(string.format("Fetching %s (%d/%d)...", fileName, index, #files))
-        local url = joinPath(baseUrl, relativePath)
+        local url = DEFAULT_BASE_URL .. "/" .. relativePath
         local body = httpGet(url)
         assert(type(body) == "string" and body ~= "", "Failed to fetch: " .. fileName)
         local lowered = body:sub(1, 256):lower()
@@ -254,7 +198,7 @@ local ok, result = xpcall(function()
 
     local mainChunk = assert(loadstring(sources["main.lua"], "@loader/main.lua"))
     return mainChunk({
-        baseUrl = baseUrl,
+        baseUrl = DEFAULT_BASE_URL,
         moduleSources = sources,
     })
 end, function(err)
