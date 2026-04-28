@@ -59,6 +59,14 @@ local function safeRequire(module)
     return nil
 end
 
+local function getHookSkinName(selectedSkin)
+    if not selectedSkin or selectedSkin == "Default" then
+        return "Vanilla"
+    end
+
+    return selectedSkin
+end
+
 function Skinchanger.new(context)
     local self = setmetatable({}, Skinchanger)
 
@@ -101,6 +109,7 @@ function Skinchanger.new(context)
     end
 
     self:_scanSkinData()
+    self:_ensureKnifeHook()
     self:_bind()
 
     return self
@@ -458,7 +467,7 @@ function Skinchanger:_ensureKnifeHook()
 
         if self.config.knifeChangerEnabled and weaponName and BASE_KNIVES[weaponName] then
             local replacementWeapon = self.config.knifeModel
-            local replacementSkin = self.config.weaponSkins[replacementWeapon] or "Vanilla"
+            local replacementSkin = getHookSkinName(self.config.weaponSkins[replacementWeapon])
             ok, result = pcall(originalGetCameraModel, replacementWeapon, replacementSkin, ...)
             if ok and result then
                 return result
@@ -475,7 +484,7 @@ function Skinchanger:_ensureKnifeHook()
 
         if self.config.knifeChangerEnabled and weaponName and BASE_KNIVES[weaponName] then
             local replacementWeapon = self.config.knifeModel
-            local replacementSkin = self.config.weaponSkins[replacementWeapon] or "Vanilla"
+            local replacementSkin = getHookSkinName(self.config.weaponSkins[replacementWeapon])
             ok, result = pcall(originalGetCharacterModel, replacementWeapon, replacementSkin, ...)
             if ok and result then
                 return result
@@ -492,7 +501,7 @@ function Skinchanger:_ensureKnifeHook()
 
         if self.config.knifeChangerEnabled and weaponName and BASE_KNIVES[weaponName] then
             local replacementWeapon = self.config.knifeModel
-            local replacementSkin = self.config.weaponSkins[replacementWeapon] or "Vanilla"
+            local replacementSkin = getHookSkinName(self.config.weaponSkins[replacementWeapon])
             ok, result = pcall(originalViewmodelNew, viewContext, replacementWeapon, replacementSkin, ...)
             if ok and result then
                 return result
@@ -510,7 +519,7 @@ function Skinchanger:_ensureKnifeHook()
 
             if self.config.gloveChangerEnabled and self.config.gloveModel then
                 local replacementGlove = self.config.gloveModel
-                local replacementSkin = self.config.gloveSkins[replacementGlove] or "Vanilla"
+                local replacementSkin = getHookSkinName(self.config.gloveSkins[replacementGlove])
                 ok, result = pcall(originalGetGloves, replacementGlove, replacementSkin)
                 if ok and result then
                     return result
