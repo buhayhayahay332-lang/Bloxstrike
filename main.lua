@@ -1,3 +1,8 @@
+local bootstrap = ...
+if type(bootstrap) ~= "table" then
+    bootstrap = {}
+end
+
 local function normalizePath(path)
     return tostring(path or ""):gsub("\\", "/")
 end
@@ -42,18 +47,9 @@ if not httpGet and game and game.HttpGet then
     end
 end
 
-local function getEnv()
-    if getgenv then
-        return getgenv()
-    end
-
-    return _G
-end
-
 local function loadLocal(relativePath)
-    local env = getEnv()
-    local preloadedSources = env.BloxtrikeModuleSources
-    local baseUrl = env.BloxtrikeBaseUrl
+    local preloadedSources = bootstrap.moduleSources
+    local baseUrl = bootstrap.baseUrl
     local cacheKey = relativePath
 
     if moduleCache[cacheKey] ~= nil then

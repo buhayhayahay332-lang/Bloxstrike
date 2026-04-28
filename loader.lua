@@ -59,14 +59,6 @@ local function getFileName(path)
     return normalized:match("([^/]+)$") or normalized
 end
 
-local function getEnv()
-    if getgenv then
-        return getgenv()
-    end
-
-    return _G
-end
-
 local function getHttpGet()
     if syn and syn.request then
         return function(url)
@@ -216,9 +208,8 @@ local function kickOnFatal(err)
     error(shortMessage, 0)
 end
 
-local env = getEnv()
-local baseUrl = sanitizeBaseUrl(env.BloxtrikeBaseUrl or DEFAULT_BASE_URL)
-assert(type(baseUrl) == "string" and baseUrl ~= "", "Set getgenv().BloxtrikeBaseUrl before running loader.lua")
+local baseUrl = sanitizeBaseUrl(DEFAULT_BASE_URL)
+assert(type(baseUrl) == "string" and baseUrl ~= "", "DEFAULT_BASE_URL must not be empty")
 assert(baseUrl:find("^https://raw%.githubusercontent%.com/"), "Base URL must resolve to raw.githubusercontent.com")
 
 local httpGet = getHttpGet()
@@ -259,12 +250,13 @@ local ok, result = xpcall(function()
         sources[relativePath] = body
     end
 
-    env.BloxtrikeBaseUrl = baseUrl
-    env.BloxtrikeModuleSources = sources
     loadingOverlay.dismiss()
 
     local mainChunk = assert(loadstring(sources["main.lua"], "@loader/main.lua"))
-    return mainChunk()
+    return mainChunk({
+        baseUrl = baseUrl,
+        moduleSources = sources,
+    })
 end, function(err)
     if debug and debug.traceback then
         return tostring(err) .. "\n" .. debug.traceback()
