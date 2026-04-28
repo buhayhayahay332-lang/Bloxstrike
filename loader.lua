@@ -1,17 +1,63 @@
-local function decodeBytes(bytes)
-    local out = {}
-    for index, byte in ipairs(bytes) do
-        out[index] = string.char(byte)
-    end
-    return table.concat(out)
+local DEFAULT_BASE_URL = "https://github.com/buhayhayahay332-lang/Bloxstrike"
+
+local function normalizePath(path)
+    return tostring(path or ""):gsub("\\", "/")
 end
 
-local DEFAULT_BUNDLE_URL = decodeBytes({
-    104, 116, 116, 112, 115, 58, 47, 47, 114, 97, 119, 46, 103, 105, 116, 104, 117, 98, 117, 115,
-    101, 114, 99, 111, 110, 116, 101, 110, 116, 46, 99, 111, 109, 47, 98, 117, 104, 97, 121, 104,
-    97, 121, 97, 104, 97, 121, 51, 51, 50, 45, 108, 97, 110, 103, 47, 66, 108, 111, 120, 115, 116,
-    114, 105, 107, 101, 47, 109, 97, 105, 110, 47, 98, 117, 110, 100, 108, 101, 46, 108, 117, 97
-})
+local function sanitizeBaseUrl(url)
+    local text = tostring(url or ""):gsub("%s+", "")
+    text = text:gsub("#.*$", "")
+    text = text:gsub("%?.*$", "")
+    text = text:gsub("/+$", "")
+
+    local owner, repo, branch, rest
+
+    owner, repo, branch, rest = text:match("^https://github%.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)$")
+    if owner and repo and branch then
+        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. (rest ~= "" and "/" .. rest or "")
+    end
+
+    owner, repo, branch, rest = text:match("^https://github%.com/([^/]+)/([^/]+)/raw/([^/]+)/(.*)$")
+    if owner and repo and branch then
+        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. (rest ~= "" and "/" .. rest or "")
+    end
+
+    owner, repo, branch, rest = text:match("^https://raw%.githubusercontent%.com/([^/]+)/([^/]+)/([^/]+)/(.*)$")
+    if owner and repo and branch then
+        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. (rest ~= "" and "/" .. rest or "")
+    end
+
+    owner, repo, branch = text:match("^https://github%.com/([^/]+)/([^/]+)/tree/([^/]+)$")
+    if owner and repo and branch then
+        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch
+    end
+
+    owner, repo = text:match("^https://github%.com/([^/]+)/([^/]+)$")
+    if owner and repo then
+        return "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/main"
+    end
+
+    return text
+end
+
+local function joinPath(...)
+    local parts = { ... }
+    local out = {}
+
+    for _, part in ipairs(parts) do
+        local text = normalizePath(part):gsub("^/+", ""):gsub("/+$", "")
+        if text ~= "" then
+            out[#out + 1] = text
+        end
+    end
+
+    return table.concat(out, "/")
+end
+
+local function getFileName(path)
+    local normalized = normalizePath(path)
+    return normalized:match("([^/]+)$") or normalized
+end
 
 local function getHttpGet()
     if syn and syn.request then
@@ -56,7 +102,7 @@ local function getGuiParent()
     return parent
 end
 
-local function createLoadingOverlay()
+local function createLoadingOverlay(message)
     local guiParent = getGuiParent()
     local existing = guiParent:FindFirstChild("BLOXTRIKE_BOOTSTRAP_LOADING")
     if existing then
@@ -103,7 +149,7 @@ local function createLoadingOverlay()
     statusLabel.BackgroundTransparency = 1
     statusLabel.Position = UDim2.new(0, 16, 0, 42)
     statusLabel.Size = UDim2.new(1, -32, 0, 34)
-    statusLabel.Text = "Loading, please wait..."
+    statusLabel.Text = tostring(message or "Loading Bloxtrike...")
     statusLabel.TextColor3 = Color3.fromRGB(205, 205, 205)
     statusLabel.TextSize = 12
     statusLabel.Font = Enum.Font.Gotham
@@ -121,6 +167,12 @@ local function createLoadingOverlay()
     end)
 
     return {
+        gui = loadingGui,
+        setText = function(text)
+            if statusLabel and statusLabel.Parent then
+                statusLabel.Text = tostring(text or "Loading Bloxtrike...")
+            end
+        end,
         dismiss = function()
             if loadingGui and loadingGui.Parent then
                 loadingGui:Destroy()
@@ -143,7 +195,6 @@ local function kickOnFatal(err)
     if firstLine ~= "" then
         shortMessage = shortMessage .. " | " .. firstLine
     end
-
     warn(detailedMessage)
 
     local players = game and game:GetService("Players")
@@ -157,25 +208,55 @@ local function kickOnFatal(err)
     error(shortMessage, 0)
 end
 
+local baseUrl = sanitizeBaseUrl(DEFAULT_BASE_URL)
+assert(type(baseUrl) == "string" and baseUrl ~= "", "DEFAULT_BASE_URL must not be empty")
+assert(baseUrl:find("^https://raw%.githubusercontent%.com/"), "Base URL must resolve to raw.githubusercontent.com")
+
 local httpGet = getHttpGet()
-local loadingOverlay = createLoadingOverlay()
+local loadingOverlay = createLoadingOverlay("Fetching script files...")
+local files = {
+    "main.lua",
+    "ui_lib.lua",
+    "src/shared/Cleaner.lua",
+    "src/shared/ErrorHandler.lua",
+    "src/shared/Services.lua",
+    "src/shared/Globals.lua",
+    "src/features/combat/Aimbot.lua",
+    "src/features/combat/TriggerBot.lua",
+    "src/features/combat/Hitbox.lua",
+    "src/features/movement/BunnyHop.lua",
+    "src/features/skins/Skinchanger.lua",
+    "src/features/visuals/ESP.lua",
+    "src/features/visuals/Chams.lua",
+    --"src/features/visuals/BulletTracers.lua",
+    --"src/features/visuals/ParticleEffects.lua",
+    "src/features/visuals/KillEffects.lua",
+    "src/features/visuals/WorldEffects.lua",
+}
+
 
 local ok, result = xpcall(function()
-    local body = httpGet(DEFAULT_BUNDLE_URL)
-    assert(type(body) == "string" and body ~= "", "Failed to fetch bundle")
-
-    local lowered = body:sub(1, 256):lower()
-    assert(not lowered:find("<!doctype html>", 1, true), "Non-raw response")
-    assert(not lowered:find("<html", 1, true), "HTML returned")
-    assert(body ~= "404: Not Found", "Missing bundle")
+    local sources = {}
+    for index, relativePath in ipairs(files) do
+        local fileName = getFileName(relativePath)
+        loadingOverlay.setText(string.format("Fetching %s (%d/%d)...", fileName, index, #files))
+        local url = joinPath(baseUrl, relativePath)
+        local body = httpGet(url)
+        assert(type(body) == "string" and body ~= "", "Failed to fetch: " .. fileName)
+        local lowered = body:sub(1, 256):lower()
+        assert(not lowered:find("<!doctype html>", 1, true), "Non-raw response for: " .. fileName)
+        assert(not lowered:find("<html", 1, true), "HTML returned for: " .. fileName)
+        assert(body ~= "404: Not Found", "Missing file: " .. fileName)
+        sources[relativePath] = body
+    end
 
     loadingOverlay.dismiss()
 
-    local compile = loadstring or load
-    assert(type(compile) == "function", "No loadstring/load available")
-
-    local bundleChunk = assert(compile(body, "@loader/bundle.lua"))
-    return bundleChunk()
+    local mainChunk = assert(loadstring(sources["main.lua"], "@loader/main.lua"))
+    return mainChunk({
+        baseUrl = baseUrl,
+        moduleSources = sources,
+    })
 end, function(err)
     if debug and debug.traceback then
         return tostring(err) .. "\n" .. debug.traceback()
