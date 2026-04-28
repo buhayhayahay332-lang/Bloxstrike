@@ -10,9 +10,9 @@ local BASE_KNIVES = {
 local KNIFE_MODELS = {
     "Karambit",
     "Butterfly Knife",
-    "M9 Bayonet",
     "Flip Knife",
     "Gut Knife",
+    "M9 Bayonet",
 }
 
 local IGNORE_FOLDERS = {
@@ -29,7 +29,7 @@ local IGNORE_FOLDERS = {
 
 local function sortedKeys(map)
     local out = {}
-    for key in pairs(map) do
+    for key in pairs(map or {}) do
         out[#out + 1] = key
     end
     table.sort(out, function(a, b)
@@ -59,14 +59,6 @@ local function safeRequire(module)
     return nil
 end
 
-local function getHookSkinName(selectedSkin)
-    if not selectedSkin or selectedSkin == "Default" then
-        return "Vanilla"
-    end
-
-    return selectedSkin
-end
-
 function Skinchanger.new(context)
     local self = setmetatable({}, Skinchanger)
 
@@ -77,14 +69,17 @@ function Skinchanger.new(context)
     self.player = self.services.Players.LocalPlayer
     self.repStore = self.services.ReplicatedStorage
     self.executor = (identifyexecutor and identifyexecutor()) or "Unknown"
+
+    self.running = true
     self.boundCameras = {}
     self.skinApplyDebounce = false
-    self.pendingApply = false
     self.lastInventoryRefresh = 0
     self.knifeHookInstalled = false
     self.knifeChangerSupported = true
-    self.running = true
+    self.inventoryController = nil
+    self.getWeaponProperties = nil
 
+    self.skinsRoot = nil
     self.weaponOptions = {}
     self.weaponNames = {}
     self.gloveOptions = {}
@@ -95,7 +90,7 @@ function Skinchanger.new(context)
         knifeChangerEnabled = false,
         knifeModel = "Karambit",
         gloveChangerEnabled = false,
-        gloveModel = nil,
+        gloveModel = "Sports Gloves",
         gloveSkins = {},
         weaponSkins = {},
         inventoryRefreshRate = 2,
@@ -109,7 +104,13 @@ function Skinchanger.new(context)
     end
 
     self:_scanSkinData()
-    self:_ensureKnifeHook()
+    self:_initInventorySupport()
+    if self.knifeChangerSupported then
+        local installed = self:_ensureKnifeHook()
+        if not installed then
+            self.knifeChangerSupported = false
+        end
+    end
     self:_bind()
 
     return self
@@ -157,8 +158,14 @@ function Skinchanger:_scanSkinData()
     self.gloveOptions = gloveMap
     self.gloveModels = sortedKeys(gloveMap)
 
-    if not self.config.gloveModel then
+    if not self.gloveOptions[self.config.gloveModel] then
         self.config.gloveModel = self.gloveModels[1]
+    end
+
+    for _, weaponName in ipairs(self.weaponNames) do
+        if self.config.weaponSkins[weaponName] == nil then
+            self.config.weaponSkins[weaponName] = "Default"
+        end
     end
 
     for _, gloveModel in ipairs(self.gloveModels) do
@@ -166,11 +173,42 @@ function Skinchanger:_scanSkinData()
             self.config.gloveSkins[gloveModel] = "Default"
         end
     end
+end
 
-    for _, weaponName in ipairs(self.weaponNames) do
-        if self.config.weaponSkins[weaponName] == nil then
-            self.config.weaponSkins[weaponName] = "Default"
-        end
+function Skinchanger:_initInventorySupport()
+    if not self.knifeChangerSupported then
+        return
+    end
+
+    if not self.inventoryController then
+        pcall(function()
+            local module = self.repStore:FindFirstChild("Controllers")
+                and self.repStore.Controllers:FindFirstChild("InventoryController")
+            if module then
+                local result = safeRequire(module)
+                if result then
+                    self.inventoryController = result
+                end
+            end
+        end)
+    end
+
+    if not self.getWeaponProperties then
+        pcall(function()
+            local module = self.repStore:FindFirstChild("Components")
+                and self.repStore.Components:FindFirstChild("Common")
+                and self.repStore.Components.Common:FindFirstChild("GetWeaponProperties")
+            if module then
+                local result = safeRequire(module)
+                if result then
+                    self.getWeaponProperties = result
+                end
+            end
+        end)
+    end
+
+    if not self.inventoryController then
+        self.knifeChangerSupported = false
     end
 end
 
@@ -196,14 +234,22 @@ end
 
 function Skinchanger:_updateInventoryNames()
     local playerGui = self.player:FindFirstChild("PlayerGui")
-    local mainGui = playerGui and playerGui:FindFirstChild("MainGui")
-    if not mainGui then
+    local invGui = playerGui and playerGui:FindFirstChild("MainGui")
+    if not invGui then
         return
     end
 
-    local gameplay = mainGui:FindFirstChild("Gameplay")
-    local bottom = gameplay and gameplay:FindFirstChild("Bottom")
-    local inventory = bottom and bottom:FindFirstChild("Inventory")
+    local gameplay = invGui:FindFirstChild("Gameplay")
+    if not gameplay then
+        return
+    end
+
+    local bottom = gameplay:FindFirstChild("Bottom")
+    if not bottom then
+        return
+    end
+
+    local inventory = bottom:FindFirstChild("Inventory")
     if not inventory then
         return
     end
@@ -212,30 +258,33 @@ function Skinchanger:_updateInventoryNames()
     if meleeSlot and self.config.knifeChangerEnabled then
         local weapon = meleeSlot:FindFirstChild("Weapon")
         if weapon then
-            local label = weapon:FindFirstChild("WeaponName")
-            if label and label:IsA("TextLabel") then
+            local weaponName = weapon:FindFirstChild("WeaponName")
+            if weaponName and weaponName:IsA("TextLabel") then
                 local knifeModel = self.config.knifeModel
                 local selectedSkin = self.config.weaponSkins[knifeModel]
-                local prefix = utf8.char(9733) .. " " .. knifeModel
-
+                local star = utf8.char(9733)
                 if selectedSkin and selectedSkin ~= "Default" then
-                    label.Text = prefix .. " | " .. selectedSkin
+                    weaponName.Text = star .. " " .. knifeModel .. " | " .. selectedSkin
                 else
-                    label.Text = prefix
+                    weaponName.Text = star .. " " .. knifeModel
                 end
             end
 
-            local meleeImage = weapon:FindFirstChild("Melee")
-            if meleeImage and meleeImage:IsA("ImageLabel") then
+            local meleeImg = weapon:FindFirstChild("Melee")
+            if meleeImg and meleeImg:IsA("ImageLabel") then
                 pcall(function()
                     local knifeModel = self.config.knifeModel
-                    local weaponDb = self.repStore:FindFirstChild("Database")
+                    local weaponDB = self.repStore:FindFirstChild("Database")
                         and self.repStore.Database:FindFirstChild("Custom")
                         and self.repStore.Database.Custom:FindFirstChild("Weapons")
-                    local weaponModule = weaponDb and weaponDb:FindFirstChild(knifeModel)
-                    local weaponData = weaponModule and safeRequire(weaponModule)
-                    if type(weaponData) == "table" and weaponData.Icon then
-                        meleeImage.Image = weaponData.Icon
+                    if weaponDB then
+                        local weaponModule = weaponDB:FindFirstChild(knifeModel)
+                        if weaponModule then
+                            local weaponData = safeRequire(weaponModule)
+                            if weaponData and type(weaponData) == "table" and weaponData.Icon then
+                                meleeImg.Image = weaponData.Icon
+                            end
+                        end
                     end
                 end)
             end
@@ -244,11 +293,11 @@ function Skinchanger:_updateInventoryNames()
 
     for _, child in ipairs(inventory:GetDescendants()) do
         if child:IsA("TextLabel") and child.Name == "WeaponName" then
-            if not meleeSlot or not child:IsDescendantOf(meleeSlot) then
+            local isMeleeChild = meleeSlot and child:IsDescendantOf(meleeSlot)
+            if not isMeleeChild and child.Text:find("|", 1, true) then
                 local parts = string.split(child.Text, " | ")
                 local baseName = (parts[1] or ""):gsub("%s+$", "")
                 local selectedSkin = self.config.weaponSkins[baseName]
-
                 if selectedSkin and selectedSkin ~= "Default" then
                     child.Text = baseName .. " | " .. selectedSkin
                 else
@@ -269,35 +318,48 @@ function Skinchanger:_applyWeaponSkin()
         return
     end
 
-    local effectiveWeaponName = weaponModel.Name
-    local shouldApply = false
+    local own = weaponModel.Name
+    local effectiveWeaponName = own
+    local canApply = false
 
-    if BASE_KNIVES[effectiveWeaponName] then
+    if BASE_KNIVES[own] then
         if self.config.knifeChangerEnabled then
             effectiveWeaponName = self.config.knifeModel
-            shouldApply = true
+            canApply = true
         end
     elseif self.config.skinChangerEnabled then
-        shouldApply = true
+        canApply = true
     end
 
-    if not shouldApply then
+    if not canApply then
         return
     end
 
+    local current = weaponModel:GetAttribute("AstroSkin")
     local selectedSkin = self.config.weaponSkins[effectiveWeaponName]
     if not selectedSkin or selectedSkin == "Default" then
         return
     end
-
-    if weaponModel:GetAttribute("SkinChangerApplied") == selectedSkin then
+    if current == selectedSkin then
         return
     end
 
-    local weaponFolder = self.skinsRoot:FindFirstChild(effectiveWeaponName)
-    local skinFolder = weaponFolder and weaponFolder:FindFirstChild(selectedSkin)
-    local cameraFolder = skinFolder and skinFolder:FindFirstChild("Camera")
-    local factoryNew = cameraFolder and cameraFolder:FindFirstChild("Factory New")
+    local weaponSkinFolder = self.skinsRoot:FindFirstChild(effectiveWeaponName)
+    if not weaponSkinFolder then
+        return
+    end
+
+    local skinFolder = weaponSkinFolder:FindFirstChild(selectedSkin)
+    if not skinFolder then
+        return
+    end
+
+    local cameraFolder = skinFolder:FindFirstChild("Camera")
+    if not cameraFolder then
+        return
+    end
+
+    local factoryNew = cameraFolder:FindFirstChild("Factory New")
     if not factoryNew then
         return
     end
@@ -311,13 +373,12 @@ function Skinchanger:_applyWeaponSkin()
                         old:Destroy()
                     end
                 end
-
                 surfaceAppearance:Clone().Parent = part
             end
         end
     end
 
-    weaponModel:SetAttribute("SkinChangerApplied", selectedSkin)
+    weaponModel:SetAttribute("AstroSkin", selectedSkin)
     self:_updateInventoryNames()
 end
 
@@ -326,14 +387,8 @@ function Skinchanger:_applyGloves()
         return
     end
 
-    local gloveModel = self.config.gloveModel
-    local selectedSkin = gloveModel and self.config.gloveSkins[gloveModel]
-    if not gloveModel or not selectedSkin or selectedSkin == "Default" then
-        return
-    end
-
     local camera = self.services.Workspace.CurrentCamera
-    if not camera or not self.skinsRoot then
+    if not camera then
         return
     end
 
@@ -344,15 +399,18 @@ function Skinchanger:_applyGloves()
             break
         end
     end
-
     if not armsModel then
         return
     end
 
     local leftArm = armsModel:FindFirstChild("Left Arm")
     local rightArm = armsModel:FindFirstChild("Right Arm")
-    local leftGlove = leftArm and leftArm:FindFirstChild("Glove")
-    local rightGlove = rightArm and rightArm:FindFirstChild("Glove")
+    if not leftArm or not rightArm then
+        return
+    end
+
+    local leftGlove = leftArm:FindFirstChild("Glove")
+    local rightGlove = rightArm:FindFirstChild("Glove")
     if not leftGlove or not rightGlove then
         return
     end
@@ -362,17 +420,42 @@ function Skinchanger:_applyGloves()
             old:Destroy()
         end
     end
-
     for _, old in ipairs(rightGlove:GetChildren()) do
         if old:IsA("SurfaceAppearance") then
             old:Destroy()
         end
     end
 
-    local gloveFolder = self.skinsRoot:FindFirstChild(gloveModel)
-    local skinVariant = gloveFolder and gloveFolder:FindFirstChild(selectedSkin)
-    local cameraFolder = skinVariant and skinVariant:FindFirstChild("Camera")
-    local factoryNew = cameraFolder and cameraFolder:FindFirstChild("Factory New")
+    local selectedModel = self.config.gloveModel
+    if not selectedModel then
+        return
+    end
+
+    local selectedSkin = self.config.gloveSkins[selectedModel]
+    if not selectedSkin or selectedSkin == "Default" then
+        return
+    end
+
+    if not self.skinsRoot then
+        return
+    end
+
+    local gloveSkinFolder = self.skinsRoot:FindFirstChild(selectedModel)
+    if not gloveSkinFolder then
+        return
+    end
+
+    local skinVariant = gloveSkinFolder:FindFirstChild(selectedSkin)
+    if not skinVariant then
+        return
+    end
+
+    local cameraFolder = skinVariant:FindFirstChild("Camera")
+    if not cameraFolder then
+        return
+    end
+
+    local factoryNew = cameraFolder:FindFirstChild("Factory New")
     if not factoryNew then
         return
     end
@@ -387,21 +470,16 @@ end
 
 function Skinchanger:_tryApply()
     if self.skinApplyDebounce then
-        self.pendingApply = true
         return
     end
 
     self.skinApplyDebounce = true
-    self.pendingApply = false
-
     self.errorHandler:Spawn("Skinchanger TryApply", function()
         task.wait(0.2)
-        self:_ensureKnifeHook()
         pcall(function()
             if self.config.skinChangerEnabled or self.config.knifeChangerEnabled then
                 self:_applyWeaponSkin()
             end
-
             if self.config.gloveChangerEnabled then
                 self:_applyGloves()
             end
@@ -411,10 +489,6 @@ function Skinchanger:_tryApply()
             self:_updateInventoryNames()
         end)
         self.skinApplyDebounce = false
-        if self.pendingApply and self.running then
-            self.pendingApply = false
-            self:_tryApply()
-        end
     end)
 end
 
@@ -440,7 +514,6 @@ function Skinchanger:_ensureKnifeHook()
         and self.repStore.Database:FindFirstChild("Components")
         and self.repStore.Database.Components:FindFirstChild("Libraries")
         and self.repStore.Database.Components.Libraries:FindFirstChild("Skins")
-
     local viewmodelModule = self.repStore:FindFirstChild("Classes")
         and self.repStore.Classes:FindFirstChild("WeaponComponent")
         and self.repStore.Classes.WeaponComponent:FindFirstChild("Classes")
@@ -452,82 +525,87 @@ function Skinchanger:_ensureKnifeHook()
 
     local skinsLibrary = safeRequire(skinsModule)
     local viewmodelLibrary = safeRequire(viewmodelModule)
-
+    if not skinsLibrary or not viewmodelLibrary then
+        return false
+    end
     if type(skinsLibrary) ~= "table" or type(viewmodelLibrary) ~= "table" then
         return false
     end
-
     if not skinsLibrary.GetCameraModel or not skinsLibrary.GetCharacterModel or not viewmodelLibrary.new then
         return false
     end
 
     local originalGetCameraModel = skinsLibrary.GetCameraModel
     skinsLibrary.GetCameraModel = function(weaponName, skinName, ...)
-        local ok, result
-
+        local success, result
         if self.config.knifeChangerEnabled and weaponName and BASE_KNIVES[weaponName] then
-            local replacementWeapon = self.config.knifeModel
-            local replacementSkin = getHookSkinName(self.config.weaponSkins[replacementWeapon])
-            ok, result = pcall(originalGetCameraModel, replacementWeapon, replacementSkin, ...)
-            if ok and result then
+            local newKnife = self.config.knifeModel
+            local newSkin = self.config.weaponSkins[newKnife] or "Vanilla"
+            success, result = pcall(originalGetCameraModel, newKnife, newSkin, ...)
+            if success and result then
                 return result
             end
         end
-
-        ok, result = pcall(originalGetCameraModel, weaponName, skinName, ...)
-        return ok and result or nil
+        success, result = pcall(originalGetCameraModel, weaponName, skinName, ...)
+        if success then
+            return result
+        end
+        return nil
     end
 
     local originalGetCharacterModel = skinsLibrary.GetCharacterModel
     skinsLibrary.GetCharacterModel = function(weaponName, skinName, ...)
-        local ok, result
-
+        local success, result
         if self.config.knifeChangerEnabled and weaponName and BASE_KNIVES[weaponName] then
-            local replacementWeapon = self.config.knifeModel
-            local replacementSkin = getHookSkinName(self.config.weaponSkins[replacementWeapon])
-            ok, result = pcall(originalGetCharacterModel, replacementWeapon, replacementSkin, ...)
-            if ok and result then
+            local newKnife = self.config.knifeModel
+            local newSkin = self.config.weaponSkins[newKnife] or "Vanilla"
+            success, result = pcall(originalGetCharacterModel, newKnife, newSkin, ...)
+            if success and result then
                 return result
             end
         end
-
-        ok, result = pcall(originalGetCharacterModel, weaponName, skinName, ...)
-        return ok and result or nil
+        success, result = pcall(originalGetCharacterModel, weaponName, skinName, ...)
+        if success then
+            return result
+        end
+        return nil
     end
 
     local originalViewmodelNew = viewmodelLibrary.new
     viewmodelLibrary.new = function(viewContext, weaponName, skinName, ...)
-        local ok, result
-
+        local success, result
         if self.config.knifeChangerEnabled and weaponName and BASE_KNIVES[weaponName] then
-            local replacementWeapon = self.config.knifeModel
-            local replacementSkin = getHookSkinName(self.config.weaponSkins[replacementWeapon])
-            ok, result = pcall(originalViewmodelNew, viewContext, replacementWeapon, replacementSkin, ...)
-            if ok and result then
+            local newKnife = self.config.knifeModel
+            local newSkin = self.config.weaponSkins[newKnife] or "Vanilla"
+            success, result = pcall(originalViewmodelNew, viewContext, newKnife, newSkin, ...)
+            if success and result then
                 return result
             end
         end
-
-        ok, result = pcall(originalViewmodelNew, viewContext, weaponName, skinName, ...)
-        return ok and result or nil
+        success, result = pcall(originalViewmodelNew, viewContext, weaponName, skinName, ...)
+        if success then
+            return result
+        end
+        return nil
     end
 
     if skinsLibrary.GetGloves then
         local originalGetGloves = skinsLibrary.GetGloves
         skinsLibrary.GetGloves = function(gloveName, skinName)
-            local ok, result
-
+            local success, result
             if self.config.gloveChangerEnabled and self.config.gloveModel then
-                local replacementGlove = self.config.gloveModel
-                local replacementSkin = getHookSkinName(self.config.gloveSkins[replacementGlove])
-                ok, result = pcall(originalGetGloves, replacementGlove, replacementSkin)
-                if ok and result then
+                local gloveModel = self.config.gloveModel
+                local targetSkin = self.config.gloveSkins[gloveModel] or "Vanilla"
+                success, result = pcall(originalGetGloves, gloveModel, targetSkin)
+                if success and result then
                     return result
                 end
             end
-
-            ok, result = pcall(originalGetGloves, gloveName, skinName)
-            return ok and result or nil
+            success, result = pcall(originalGetGloves, gloveName, skinName)
+            if success then
+                return result
+            end
+            return nil
         end
     end
 
@@ -640,15 +718,13 @@ function Skinchanger:GetWeaponSkin(weaponName)
 end
 
 function Skinchanger:GetKnifeModels()
-    local available = {}
-
+    local out = {}
     for _, model in ipairs(KNIFE_MODELS) do
         if self.weaponOptions[model] then
-            available[#available + 1] = model
+            out[#out + 1] = model
         end
     end
-
-    return available
+    return out
 end
 
 function Skinchanger:IsKnifeModel(weaponName)
