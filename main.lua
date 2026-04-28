@@ -488,6 +488,47 @@ end
 window:switchTab(configTab)
 window:addConfigManager("default")
 
+task.defer(function()
+    local okList, configNames = pcall(function()
+        return window:listConfigs()
+    end)
+    if not okList or type(configNames) ~= "table" or #configNames == 0 then
+        return
+    end
+
+    local selectedConfig = nil
+    local latestSavedAt = nil
+
+    for _, configName in ipairs(configNames) do
+        local normalizedName = tostring(configName):lower()
+        if normalizedName ~= "default" then
+            local payload = nil
+            pcall(function()
+                if window._readJsonFile and window._getConfigFilePath then
+                    payload = window:_readJsonFile(window:_getConfigFilePath(configName))
+                end
+            end)
+
+            local savedAt = type(payload) == "table"
+                and type(payload.meta) == "table"
+                and payload.meta.saved_at
+
+            if type(savedAt) == "string" and (not latestSavedAt or savedAt > latestSavedAt) then
+                latestSavedAt = savedAt
+                selectedConfig = configName
+            elseif not selectedConfig then
+                selectedConfig = configName
+            end
+        end
+    end
+
+    if selectedConfig then
+        pcall(function()
+            window:loadConfig(selectedConfig)
+        end)
+    end
+end)
+
 window:notify("Bloxtrike", "loaded.", nil, false)
 
 return {
