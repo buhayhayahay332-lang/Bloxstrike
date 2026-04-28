@@ -27,8 +27,6 @@ local IGNORE_FOLDERS = {
     ["T Glove"] = true,
 }
 
-local unpackArgs = table.unpack or unpack
-
 local function sortedKeys(map)
     local out = {}
     for key in pairs(map) do
@@ -73,15 +71,11 @@ function Skinchanger.new(context)
     self.executor = (identifyexecutor and identifyexecutor()) or "Unknown"
     self.boundCameras = {}
     self.skinApplyDebounce = false
-    self.knifeRefreshPending = false
+    self.pendingApply = false
     self.lastInventoryRefresh = 0
     self.knifeHookInstalled = false
     self.knifeChangerSupported = true
     self.running = true
-    self.originalViewmodelNew = nil
-    self.activeViewmodel = nil
-    self.lastViewmodelContext = nil
-    self.lastViewmodelArgs = nil
 
     self.weaponOptions = {}
     self.weaponNames = {}
@@ -384,10 +378,12 @@ end
 
 function Skinchanger:_tryApply()
     if self.skinApplyDebounce then
+        self.pendingApply = true
         return
     end
 
     self.skinApplyDebounce = true
+    self.pendingApply = false
 
     self.errorHandler:Spawn("Skinchanger TryApply", function()
         task.wait(0.2)
@@ -406,107 +402,10 @@ function Skinchanger:_tryApply()
             self:_updateInventoryNames()
         end)
         self.skinApplyDebounce = false
-    end)
-end
-
-function Skinchanger:_destroyActiveViewmodel()
-    local viewmodel = self.activeViewmodel
-    if not viewmodel then
-        return
-    end
-
-    self.activeViewmodel = nil
-
-    local cleanupMethods = { "Destroy", "destroy", "Remove", "remove", "Dispose", "dispose", "Cleanup", "cleanup" }
-    for _, methodName in ipairs(cleanupMethods) do
-        local method = type(viewmodel) == "table" and viewmodel[methodName]
-        if type(method) == "function" then
-            local ok = pcall(method, viewmodel)
-            if ok then
-                return
-            end
+        if self.pendingApply and self.running then
+            self.pendingApply = false
+            self:_tryApply()
         end
-    end
-
-    if typeof(viewmodel) == "Instance" then
-        pcall(function()
-            viewmodel:Destroy()
-        end)
-        return
-    end
-
-    if type(viewmodel) == "table" then
-        for _, key in ipairs({ "Model", "model", "CameraModel", "cameraModel", "Object", "object" }) do
-            local instance = viewmodel[key]
-            if typeof(instance) == "Instance" then
-                pcall(function()
-                    instance:Destroy()
-                end)
-                break
-            end
-        end
-    end
-end
-
-function Skinchanger:_forceRefreshKnifeViewmodel()
-    if not self.config.knifeChangerEnabled or not self.knifeChangerSupported then
-        return false
-    end
-
-    if not self:_ensureKnifeHook() then
-        return false
-    end
-
-    local weaponModel = self:_getWeaponModel()
-    if not weaponModel or not BASE_KNIVES[weaponModel.Name] then
-        return false
-    end
-
-    if type(self.originalViewmodelNew) ~= "function" or not self.lastViewmodelContext then
-        return false
-    end
-
-    local replacementWeapon = self.config.knifeModel
-    local replacementSkin = self.config.weaponSkins[replacementWeapon] or "Vanilla"
-    local packedArgs = self.lastViewmodelArgs or table.pack()
-
-    self:_destroyActiveViewmodel()
-    if weaponModel.Parent then
-        pcall(function()
-            weaponModel:Destroy()
-        end)
-    end
-
-    local ok, newViewmodel = pcall(self.originalViewmodelNew, self.lastViewmodelContext, replacementWeapon, replacementSkin, unpackArgs(packedArgs, 1, packedArgs.n or 0))
-    if ok and newViewmodel then
-        self.activeViewmodel = newViewmodel
-        task.defer(function()
-            if not self.running then
-                return
-            end
-            pcall(function()
-                self:_applyWeaponSkin()
-                self:_updateInventoryNames()
-            end)
-        end)
-        return true
-    end
-
-    return false
-end
-
-function Skinchanger:_queueKnifeRefresh()
-    if self.knifeRefreshPending then
-        return
-    end
-
-    self.knifeRefreshPending = true
-    self.errorHandler:Spawn("Skinchanger KnifeRefresh", function()
-        task.wait(0.35)
-        pcall(function()
-            self:_forceRefreshKnifeViewmodel()
-        end)
-        self.knifeRefreshPending = false
     end)
 end
 
@@ -588,26 +487,19 @@ function Skinchanger:_ensureKnifeHook()
     end
 
     local originalViewmodelNew = viewmodelLibrary.new
-    self.originalViewmodelNew = originalViewmodelNew
     viewmodelLibrary.new = function(viewContext, weaponName, skinName, ...)
         local ok, result
-        self.lastViewmodelContext = viewContext
-        self.lastViewmodelArgs = table.pack(...)
 
         if self.config.knifeChangerEnabled and weaponName and BASE_KNIVES[weaponName] then
             local replacementWeapon = self.config.knifeModel
             local replacementSkin = self.config.weaponSkins[replacementWeapon] or "Vanilla"
             ok, result = pcall(originalViewmodelNew, viewContext, replacementWeapon, replacementSkin, ...)
             if ok and result then
-                self.activeViewmodel = result
                 return result
             end
         end
 
         ok, result = pcall(originalViewmodelNew, viewContext, weaponName, skinName, ...)
-        if ok and result then
-            self.activeViewmodel = result
-        end
         return ok and result or nil
     end
 
@@ -680,16 +572,12 @@ end
 function Skinchanger:SetKnifeChangerEnabled(value)
     self.config.knifeChangerEnabled = value == true
     self:_tryApply()
-    if self.config.knifeChangerEnabled then
-        self:_queueKnifeRefresh()
-    end
 end
 
 function Skinchanger:SetKnifeModel(value)
     if value and self.weaponOptions[value] then
         self.config.knifeModel = value
         self:_tryApply()
-        self:_queueKnifeRefresh()
     end
 end
 
