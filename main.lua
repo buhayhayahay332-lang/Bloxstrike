@@ -256,6 +256,24 @@ local function refreshKnifeSkinDropdown()
     knifeSkinDropdown.set(features.skinchanger:GetWeaponSkin(knifeModel))
 end
 
+local function queueSkinchangerConfigSync()
+    task.spawn(function()
+        task.wait(0.05)
+        pcall(refreshKnifeSkinDropdown)
+        pcall(function()
+            features.skinchanger:ApplyNow()
+        end)
+        task.wait(0.35)
+        pcall(function()
+            features.skinchanger:ApplyNow()
+        end)
+        task.wait(0.8)
+        pcall(function()
+            features.skinchanger:ApplyNow()
+        end)
+    end)
+end
+
 knifeModelDropdown.set(features.skinchanger:GetKnifeModel())
 refreshKnifeSkinDropdown()
 
@@ -459,6 +477,17 @@ end))
 window:addToggle("Anti Smoke", false, safeUi("Anti Smoke", function(value)
     features.worldEffects:SetSetting("antiSmoke", value)
 end))
+
+do
+    local originalLoadConfig = window.loadConfig
+    function window:loadConfig(name)
+        local ok, err = originalLoadConfig(self, name)
+        if ok then
+            queueSkinchangerConfigSync()
+        end
+        return ok, err
+    end
+end
 
 window:switchTab(configTab)
 window:addConfigManager("default")
