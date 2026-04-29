@@ -88,7 +88,7 @@ function Skinchanger.new(context)
     self.config = {
         skinChangerEnabled = false,
         knifeChangerEnabled = false,
-        knifeModel = "Karambit",
+        knifeModel = "Default",
         gloveChangerEnabled = false,
         gloveModel = "Sports Gloves",
         gloveSkins = {},
@@ -96,12 +96,16 @@ function Skinchanger.new(context)
         inventoryRefreshRate = 2,
     }
 
+    --[[
     if string.find(self.executor, "RonixExploit", 1, true)
         or string.find(self.executor, "Xeno", 1, true)
         or string.find(self.executor, "Solara", 1, true)
     then
         self.knifeChangerSupported = false
-    end
+    end]]
+
+
+     self.knifeChangerSupported = true
 
     self:_scanSkinData()
     self:_initInventorySupport()
