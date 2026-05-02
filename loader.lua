@@ -154,7 +154,90 @@ local function kickOnFatal(err)
     error(shortMessage, 0)
 end
 
+local function kickUnsupported(missing)
+    local shortMessage = "[Bloxtrike] Executor doesn't support required functions"
+    if type(missing) == "table" and #missing > 0 then
+        shortMessage = shortMessage .. " | " .. table.concat(missing, ", ")
+    end
+
+    local players = game and game:GetService("Players")
+    local player = players and players.LocalPlayer
+    if player then
+        pcall(function()
+            player:Kick(shortMessage)
+        end)
+    end
+
+    error(shortMessage, 0)
+end
+
+local function collectMissingSupport()
+    local missing = {}
+
+    if type(loadstring) ~= "function" then
+        missing[#missing + 1] = "loadstring"
+    end
+
+    if type(cloneref) ~= "function" then
+        missing[#missing + 1] = "cloneref"
+    end
+
+    local hasHttpSupport = (syn and type(syn.request) == "function")
+        or (http and type(http.request) == "function")
+        or (game and type(game.HttpGet) == "function")
+    if not hasHttpSupport then
+        missing[#missing + 1] = "HTTP"
+    end
+
+    if not (Drawing and type(Drawing.new) == "function") then
+        missing[#missing + 1] = "Drawing.new"
+    end
+
+    if type(mousemoverel) ~= "function" then
+        missing[#missing + 1] = "mousemoverel"
+    end
+
+    if type(mouse1click) ~= "function" then
+        missing[#missing + 1] = "mouse1click"
+    end
+
+    if type(isfolder) ~= "function" then
+        missing[#missing + 1] = "isfolder"
+    end
+
+    if type(makefolder) ~= "function" then
+        missing[#missing + 1] = "makefolder"
+    end
+
+    if type(isfile) ~= "function" then
+        missing[#missing + 1] = "isfile"
+    end
+
+    if type(readfile) ~= "function" then
+        missing[#missing + 1] = "readfile"
+    end
+
+    if type(writefile) ~= "function" then
+        missing[#missing + 1] = "writefile"
+    end
+
+    if type(listfiles) ~= "function" then
+        missing[#missing + 1] = "listfiles"
+    end
+
+    if type(delfile) ~= "function" then
+        missing[#missing + 1] = "delfile"
+    end
+
+    return missing
+end
+
 assert(type(DEFAULT_BASE_URL) == "string" and DEFAULT_BASE_URL ~= "", "DEFAULT_BASE_URL must not be empty")
+
+local missingSupport = collectMissingSupport()
+if #missingSupport > 0 then
+    kickUnsupported(missingSupport)
+end
 
 local httpGet = getHttpGet()
 local loadingOverlay = createLoadingOverlay("Fetching script files...")
