@@ -8,6 +8,7 @@ local BASE_KNIVES = {
 }
 
 local KNIFE_MODELS = {
+    "Default",
     "Karambit",
     "Butterfly Knife",
     "Flip Knife",
