@@ -14,6 +14,7 @@ local KNIFE_MODELS = {
     "Flip Knife",
     "Gut Knife",
     "M9 Bayonet",
+    "Stiletto Knife",
 }
 
 local IGNORE_FOLDERS = {
