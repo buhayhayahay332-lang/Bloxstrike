@@ -8,13 +8,13 @@ local BASE_KNIVES = {
 }
 
 local KNIFE_MODELS = {
-    "Default",
+    "Skeleton Knife",
+    "Stiletto Knife",
     "Karambit",
     "Butterfly Knife",
     "Flip Knife",
     "Gut Knife",
     "M9 Bayonet",
-    "Stiletto Knife",
 }
 
 local IGNORE_FOLDERS = {
