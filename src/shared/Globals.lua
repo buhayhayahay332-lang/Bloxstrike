@@ -63,5 +63,39 @@ return function(services)
         return enemyFolder ~= nil and model ~= nil and model.Parent == enemyFolder
     end
 
+    function globals:IsMyModel(model)
+        return model ~= nil and model.Name == player.Name and model == self:IsAlive()
+    end
+
+    function globals:GetTargetModels(teamCheck)
+        local models = {}
+
+        if teamCheck ~= false then
+            local enemyFolder = self:GetEnemyFolder()
+            if enemyFolder then
+                for _, model in ipairs(enemyFolder:GetChildren()) do
+                    models[#models + 1] = model
+                end
+            end
+
+            return models
+        end
+
+        local tFolder = self:GetTFolder()
+        local ctFolder = self:GetCTFolder()
+
+        for _, folder in ipairs({ tFolder, ctFolder }) do
+            if folder then
+                for _, model in ipairs(folder:GetChildren()) do
+                    if not self:IsMyModel(model) then
+                        models[#models + 1] = model
+                    end
+                end
+            end
+        end
+
+        return models
+    end
+
     return globals
 end

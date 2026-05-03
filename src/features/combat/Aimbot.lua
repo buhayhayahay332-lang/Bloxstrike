@@ -10,6 +10,7 @@ function Aimbot.new(context)
     self.errorHandler = context.errorHandler
     self.settings = {
         enabled = false,
+        teamCheck = false,
         showFov = false,
         fovRadius = 100,
         smoothing = 3,
@@ -40,29 +41,44 @@ function Aimbot.new(context)
     return self
 end
 
+function Aimbot:_getAimScreenPosition(camera)
+    local activeCamera = camera or self.globals:GetCamera()
+    if not activeCamera then
+        return nil
+    end
+
+    return Vector2.new(
+        activeCamera.ViewportSize.X * 0.5,
+        activeCamera.ViewportSize.Y * 0.5
+    )
+end
+
 function Aimbot:_getClosestEnemyToMouse()
     if not self.settings.enabled then
         return nil
     end
 
-    local enemyFolder = self.globals:GetEnemyFolder()
     local camera = self.globals:GetCamera()
-    if not enemyFolder or not camera then
+    if not camera then
         return nil
     end
 
-    local mousePosition = self.services.UserInputService:GetMouseLocation()
+    local aimPosition = self:_getAimScreenPosition(camera)
+    if not aimPosition then
+        return nil
+    end
+
     local closestHead = nil
     local shortestDistance = self.settings.fovRadius
 
-    for _, enemy in ipairs(enemyFolder:GetChildren()) do
+    for _, enemy in ipairs(self.globals:GetTargetModels(self.settings.teamCheck)) do
         local humanoid = enemy:FindFirstChildOfClass("Humanoid")
         local head = enemy:FindFirstChild("Head")
 
         if humanoid and humanoid.Health > 0 and head then
             local headPosition, onScreen = camera:WorldToViewportPoint(head.Position)
             if onScreen then
-                local distance = (Vector2.new(headPosition.X, headPosition.Y) - mousePosition).Magnitude
+                local distance = (Vector2.new(headPosition.X, headPosition.Y) - aimPosition).Magnitude
                 if distance < shortestDistance then
                     shortestDistance = distance
                     closestHead = head
@@ -80,7 +96,13 @@ function Aimbot:_updateFovCircle()
     end
 
     if self.settings.showFov then
-        self.fovCircle.Position = self.services.UserInputService:GetMouseLocation()
+        local aimPosition = self:_getAimScreenPosition()
+        if not aimPosition then
+            self.fovCircle.Visible = false
+            return
+        end
+
+        self.fovCircle.Position = aimPosition
         self.fovCircle.Radius = self.settings.fovRadius
         self.fovCircle.Visible = true
     else
@@ -115,9 +137,13 @@ function Aimbot:_bind()
         end
 
         local headPosition = camera:WorldToViewportPoint(targetHead.Position)
-        local mousePosition = self.services.UserInputService:GetMouseLocation()
-        local moveX = (headPosition.X - mousePosition.X) / self.settings.smoothing
-        local moveY = (headPosition.Y - mousePosition.Y) / self.settings.smoothing
+        local aimPosition = self:_getAimScreenPosition(camera)
+        if not aimPosition then
+            return
+        end
+
+        local moveX = (headPosition.X - aimPosition.X) / self.settings.smoothing
+        local moveY = (headPosition.Y - aimPosition.Y) / self.settings.smoothing
 
         if mousemoverel then
             mousemoverel(moveX, moveY)
@@ -127,6 +153,10 @@ end
 
 function Aimbot:SetEnabled(value)
     self.settings.enabled = value == true
+end
+
+function Aimbot:SetTeamCheck(value)
+    self.settings.teamCheck = value == true
 end
 
 function Aimbot:SetShowFov(value)

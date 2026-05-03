@@ -9,6 +9,7 @@ function Hitbox.new(context)
     self.errorHandler = context.errorHandler
     self.settings = {
         enabled = false,
+        teamCheck = false,
         size = 3,
     }
     self.running = true
@@ -23,28 +24,25 @@ function Hitbox.new(context)
         while self.running do
             task.wait(0.5)
 
-            local enemyFolder = self.globals:GetEnemyFolder()
-            if enemyFolder then
-                for _, enemy in ipairs(enemyFolder:GetChildren()) do
-                    local head = enemy:FindFirstChild("Head")
-                    local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+            for _, enemy in ipairs(self.globals:GetTargetModels(self.settings.teamCheck)) do
+                local head = enemy:FindFirstChild("Head")
+                local humanoid = enemy:FindFirstChildOfClass("Humanoid")
 
-                    if head and humanoid and humanoid.Health > 0 then
-                        if not self.originalHeadStates[head] then
-                            self.originalHeadStates[head] = {
-                                size = head.Size,
-                                transparency = head.Transparency,
-                                canCollide = head.CanCollide,
-                            }
-                        end
+                if head and humanoid and humanoid.Health > 0 then
+                    if not self.originalHeadStates[head] then
+                        self.originalHeadStates[head] = {
+                            size = head.Size,
+                            transparency = head.Transparency,
+                            canCollide = head.CanCollide,
+                        }
+                    end
 
-                        if self.settings.enabled then
-                            head.Size = Vector3.new(self.settings.size, self.settings.size, self.settings.size)
-                            head.CanCollide = false
-                            head.Transparency = 0.5
-                        else
-                            self:_restoreHead(head)
-                        end
+                    if self.settings.enabled then
+                        head.Size = Vector3.new(self.settings.size, self.settings.size, self.settings.size)
+                        head.CanCollide = false
+                        head.Transparency = 0.5
+                    else
+                        self:_restoreHead(head)
                     end
                 end
             end
@@ -76,6 +74,13 @@ end
 function Hitbox:SetEnabled(value)
     self.settings.enabled = value == true
     if not self.settings.enabled then
+        self:_restoreAll()
+    end
+end
+
+function Hitbox:SetTeamCheck(value)
+    self.settings.teamCheck = value == true
+    if not self.settings.teamCheck and not self.settings.enabled then
         self:_restoreAll()
     end
 end

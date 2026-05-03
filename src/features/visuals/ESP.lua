@@ -19,6 +19,7 @@ function ESP.new(context)
     self.cache = {}
     self.settings = {
         enabled = false,
+        teamCheck = false,
         showBox = false,
         showName = false,
         showHealth = false,
@@ -152,9 +153,8 @@ function ESP:_update()
         return
     end
 
-    local enemyFolder = self.globals:GetEnemyFolder()
     local camera = self.globals:GetCamera()
-    if not enemyFolder or not camera then
+    if not camera then
         return
     end
 
@@ -162,7 +162,7 @@ function ESP:_update()
     local screenCenter = Vector2.new(camera.ViewportSize.X * 0.5, camera.ViewportSize.Y)
     local rainbowColor = self.settings.rainbow and self:_getRainbowColor() or nil
 
-    for _, enemy in ipairs(enemyFolder:GetChildren()) do
+    for _, enemy in ipairs(self.globals:GetTargetModels(self.settings.teamCheck)) do
         local humanoid = enemy:FindFirstChildOfClass("Humanoid")
         local root = enemy:FindFirstChild("HumanoidRootPart")
         local head = enemy:FindFirstChild("Head")
