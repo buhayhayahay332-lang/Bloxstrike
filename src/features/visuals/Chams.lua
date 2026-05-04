@@ -14,6 +14,8 @@ function Chams.new(context)
         rainbow = false,
         rainbowSpeed = 2.0,
         playerEnabled = false,
+        playerTeamCheck = false,
+        playerVisibleOnly = false,
         playerColor = Color3.fromRGB(255, 0, 0),
         playerFillTransparency = 0.7,
         playerOutlineTransparency = 0,
@@ -62,15 +64,10 @@ function Chams:_updatePlayers()
         return
     end
 
-    local enemyFolder = self.globals:GetEnemyFolder()
-    if not enemyFolder then
-        return
-    end
-
     local color = self:_getColor(self.settings.playerColor)
     local active = {}
 
-    for _, enemy in ipairs(enemyFolder:GetChildren()) do
+    for _, enemy in ipairs(self.globals:GetTargetModels(self.settings.playerTeamCheck)) do
         local humanoid = enemy:FindFirstChildOfClass("Humanoid")
         if humanoid and humanoid.Health > 0 then
             active[enemy] = true
@@ -78,12 +75,14 @@ function Chams:_updatePlayers()
             if not self.playerCache[enemy] then
                 local highlight = Instance.new("Highlight")
                 highlight.Adornee = enemy
-                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                 highlight.Parent = enemy
                 self.playerCache[enemy] = highlight
             end
 
             local highlight = self.playerCache[enemy]
+            highlight.DepthMode = self.settings.playerVisibleOnly
+                and Enum.HighlightDepthMode.Occluded
+                or Enum.HighlightDepthMode.AlwaysOnTop
             highlight.FillColor = color
             highlight.OutlineColor = color
             highlight.FillTransparency = self.settings.playerFillTransparency

@@ -11,6 +11,7 @@ function Aimbot.new(context)
     self.settings = {
         enabled = false,
         teamCheck = false,
+        wallCheck = false,
         showFov = false,
         fovRadius = 100,
         smoothing = 3,
@@ -53,6 +54,34 @@ function Aimbot:_getAimScreenPosition(camera)
     )
 end
 
+function Aimbot:_hasLineOfSight(head)
+    local camera = self.globals:GetCamera()
+    if not camera or not head then
+        return false
+    end
+
+    local origin = camera.CFrame.Position
+    local direction = head.Position - origin
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+
+    local ignoreList = { camera }
+    local character = self.globals:GetPlayer().Character
+    if character then
+        ignoreList[#ignoreList + 1] = character
+    end
+    params.FilterDescendantsInstances = ignoreList
+
+    local result = self.services.Workspace:Raycast(origin, direction, params)
+    if not result then
+        return true
+    end
+
+    local hitModel = result.Instance and result.Instance:FindFirstAncestorOfClass("Model")
+    return hitModel ~= nil and hitModel == head:FindFirstAncestorOfClass("Model")
+end
+
 function Aimbot:_getClosestEnemyToMouse()
     if not self.settings.enabled then
         return nil
@@ -75,7 +104,9 @@ function Aimbot:_getClosestEnemyToMouse()
         local humanoid = enemy:FindFirstChildOfClass("Humanoid")
         local head = enemy:FindFirstChild("Head")
 
-        if humanoid and humanoid.Health > 0 and head then
+        if humanoid and humanoid.Health > 0 and head
+            and (not self.settings.wallCheck or self:_hasLineOfSight(head))
+        then
             local headPosition, onScreen = camera:WorldToViewportPoint(head.Position)
             if onScreen then
                 local distance = (Vector2.new(headPosition.X, headPosition.Y) - aimPosition).Magnitude
@@ -157,6 +188,10 @@ end
 
 function Aimbot:SetTeamCheck(value)
     self.settings.teamCheck = value == true
+end
+
+function Aimbot:SetWallCheck(value)
+    self.settings.wallCheck = value == true
 end
 
 function Aimbot:SetShowFov(value)
