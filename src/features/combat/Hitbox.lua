@@ -11,6 +11,7 @@ function Hitbox.new(context)
         enabled = false,
         teamCheck = false,
         size = 3,
+        transparency = 0.5,
     }
     self.running = true
     self.originalHeadStates = {}
@@ -40,7 +41,7 @@ function Hitbox.new(context)
                     if self.settings.enabled then
                         head.Size = Vector3.new(self.settings.size, self.settings.size, self.settings.size)
                         head.CanCollide = false
-                        head.Transparency = 0.5
+                        head.Transparency = self.settings.transparency
                     else
                         self:_restoreHead(head)
                     end
@@ -88,7 +89,14 @@ end
 function Hitbox:SetSize(value)
     local size = tonumber(value)
     if size then
-        self.settings.size = math.clamp(size, 1, 3)
+        self.settings.size = math.clamp(size, 1, 5)
+    end
+end
+
+function Hitbox:SetTransparency(value)
+    local transparency = tonumber(value)
+    if transparency then
+        self.settings.transparency = math.clamp(transparency, 0, 1)
     end
 end
 
