@@ -65,6 +65,7 @@ function Skinchanger.new(context)
     local self = setmetatable({}, Skinchanger)
 
     self.services = context.services
+    self.globals = context.globals
     self.Cleaner = context.Cleaner
     self.cleaner = context.Cleaner.new()
     self.errorHandler = context.errorHandler
@@ -119,6 +120,10 @@ function Skinchanger.new(context)
     self:_bind()
 
     return self
+end
+
+function Skinchanger:_isLocalSkinApplyActive()
+    return self.globals and self.globals:IsAlive() ~= nil
 end
 
 function Skinchanger:_scanSkinData()
@@ -238,6 +243,10 @@ function Skinchanger:_getWeaponModel()
 end
 
 function Skinchanger:_updateInventoryNames()
+    if not self:_isLocalSkinApplyActive() then
+        return
+    end
+
     local playerGui = self.player:FindFirstChild("PlayerGui")
     local invGui = playerGui and playerGui:FindFirstChild("MainGui")
     if not invGui then
@@ -314,6 +323,10 @@ function Skinchanger:_updateInventoryNames()
 end
 
 function Skinchanger:_applyWeaponSkin()
+    if not self:_isLocalSkinApplyActive() then
+        return
+    end
+
     if not self.skinsRoot then
         return
     end
@@ -388,6 +401,10 @@ function Skinchanger:_applyWeaponSkin()
 end
 
 function Skinchanger:_applyGloves()
+    if not self:_isLocalSkinApplyActive() then
+        return
+    end
+
     if not self.config.gloveChangerEnabled then
         return
     end
@@ -543,7 +560,11 @@ function Skinchanger:_ensureKnifeHook()
     local originalGetCameraModel = skinsLibrary.GetCameraModel
     skinsLibrary.GetCameraModel = function(weaponName, skinName, ...)
         local success, result
-        if self.config.knifeChangerEnabled and weaponName and BASE_KNIVES[weaponName] then
+        if self:_isLocalSkinApplyActive()
+            and self.config.knifeChangerEnabled
+            and weaponName
+            and BASE_KNIVES[weaponName]
+        then
             local newKnife = self.config.knifeModel
             local newSkin = self.config.weaponSkins[newKnife] or "Vanilla"
             success, result = pcall(originalGetCameraModel, newKnife, newSkin, ...)
@@ -561,7 +582,11 @@ function Skinchanger:_ensureKnifeHook()
     local originalGetCharacterModel = skinsLibrary.GetCharacterModel
     skinsLibrary.GetCharacterModel = function(weaponName, skinName, ...)
         local success, result
-        if self.config.knifeChangerEnabled and weaponName and BASE_KNIVES[weaponName] then
+        if self:_isLocalSkinApplyActive()
+            and self.config.knifeChangerEnabled
+            and weaponName
+            and BASE_KNIVES[weaponName]
+        then
             local newKnife = self.config.knifeModel
             local newSkin = self.config.weaponSkins[newKnife] or "Vanilla"
             success, result = pcall(originalGetCharacterModel, newKnife, newSkin, ...)
@@ -579,7 +604,11 @@ function Skinchanger:_ensureKnifeHook()
     local originalViewmodelNew = viewmodelLibrary.new
     viewmodelLibrary.new = function(viewContext, weaponName, skinName, ...)
         local success, result
-        if self.config.knifeChangerEnabled and weaponName and BASE_KNIVES[weaponName] then
+        if self:_isLocalSkinApplyActive()
+            and self.config.knifeChangerEnabled
+            and weaponName
+            and BASE_KNIVES[weaponName]
+        then
             local newKnife = self.config.knifeModel
             local newSkin = self.config.weaponSkins[newKnife] or "Vanilla"
             success, result = pcall(originalViewmodelNew, viewContext, newKnife, newSkin, ...)
@@ -598,7 +627,10 @@ function Skinchanger:_ensureKnifeHook()
         local originalGetGloves = skinsLibrary.GetGloves
         skinsLibrary.GetGloves = function(gloveName, skinName)
             local success, result
-            if self.config.gloveChangerEnabled and self.config.gloveModel then
+            if self:_isLocalSkinApplyActive()
+                and self.config.gloveChangerEnabled
+                and self.config.gloveModel
+            then
                 local gloveModel = self.config.gloveModel
                 local targetSkin = self.config.gloveSkins[gloveModel] or "Vanilla"
                 success, result = pcall(originalGetGloves, gloveModel, targetSkin)
