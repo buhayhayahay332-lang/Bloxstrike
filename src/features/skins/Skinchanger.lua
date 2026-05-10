@@ -299,9 +299,9 @@ function Skinchanger:_updateInventoryNames()
     for _, child in ipairs(inventory:GetDescendants()) do
         if child:IsA("TextLabel") and child.Name == "WeaponName" then
             local isMeleeChild = meleeSlot and child:IsDescendantOf(meleeSlot)
-            if not isMeleeChild and child.Text:find("|", 1, true) then
+            if not isMeleeChild then
                 local parts = string.split(child.Text, " | ")
-                local baseName = (parts[1] or ""):gsub("%s+$", "")
+                local baseName = (parts[1] or child.Text or ""):gsub("%s+$", "")
                 local selectedSkin = self.config.weaponSkins[baseName]
                 if selectedSkin and selectedSkin ~= "Default" then
                     child.Text = baseName .. " | " .. selectedSkin
