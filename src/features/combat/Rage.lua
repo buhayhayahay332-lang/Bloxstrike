@@ -415,6 +415,23 @@ function Rage:_patchWeaponModules()
     end
 end
 
+function Rage:_initInventorySupport()
+    if self.inventoryController then
+        return
+    end
+
+    local module = self.repStore:FindFirstChild("Controllers")
+        and self.repStore.Controllers:FindFirstChild("InventoryController")
+    if not module then
+        return
+    end
+
+    local result = safeRequire(module)
+    if type(result) == "table" then
+        self.inventoryController = result
+    end
+end
+
 function Rage:_installSilentAimHooks()
     if self._silentAimBound then
         return
