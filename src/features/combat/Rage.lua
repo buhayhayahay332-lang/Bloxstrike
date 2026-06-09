@@ -46,11 +46,9 @@ function Rage.new(context)
     self._silentAimHooks = {}
     self._silentAimAttempted = false
     self._silentAimBound = false
-    self._inventoryEquippedBound = false
     self._weaponDefaults = {}
     self._weaponModules = {}
     self._weaponTables = {}
-    self._lastWeaponPatchTick = 0
 
     self.settings = {
         rageMode = false,
@@ -472,26 +470,6 @@ function Rage:_initInventorySupport()
     end
 end
 
-function Rage:_hasWeaponModsEnabled()
-    return self.settings.instantReload
-        or self.settings.instaEquip
-        or self.settings.rapidFire
-        or self.settings.memoryNoRecoil
-        or self.settings.noSpread
-        or self.settings.autoClicker
-        or self.settings.rageMode
-end
-
-function Rage:_refreshWeaponMods(force)
-    local now = tick()
-    if not force and (now - self._lastWeaponPatchTick) < 0.35 then
-        return
-    end
-
-    self._lastWeaponPatchTick = now
-    self:_patchWeaponModules()
-end
-
 function Rage:_installSilentAimHooks()
     if self._silentAimAttempted then
         return
@@ -764,31 +742,9 @@ function Rage:_bind()
 
     self.errorHandler:Spawn("Rage Weapon Mods", function()
         while self.running do
-            if self:_hasWeaponModsEnabled() then
-                self:_refreshWeaponMods(false)
-            end
+            self:_patchWeaponModules()
             self:_installSilentAimHooks()
             task.wait(2)
-        end
-    end)
-
-    self.errorHandler:Spawn("Rage Weapon Events", function()
-        while self.running and not self._inventoryEquippedBound do
-            self:_initInventorySupport()
-            local controller = self.inventoryController
-            if type(controller) == "table" and not self._inventoryEquippedBound then
-                local equippedEvent = controller.OnInventoryItemEquipped
-                if equippedEvent then
-                    self._inventoryEquippedBound = true
-                    self.cleaner:Give(self.errorHandler:Connect(equippedEvent, "Rage Inventory Equipped", function()
-                        if self:_hasWeaponModsEnabled() then
-                            self:_refreshWeaponMods(true)
-                        end
-                    end))
-                    break
-                end
-            end
-            task.wait(1)
         end
     end)
 
@@ -936,47 +892,47 @@ end
 
 function Rage:SetRapidFire(value)
     self.settings.rapidFire = value == true
-    self:_refreshWeaponMods(true)
+    self:_patchWeaponModules()
 end
 
 function Rage:SetRapidFireDelay(value)
     local number = tonumber(value)
     if number then
         self.settings.rapidFireDelay = math.clamp(number, 1, 500)
-        self:_refreshWeaponMods(true)
+        self:_patchWeaponModules()
     end
 end
 
 function Rage:SetInstantReload(value)
     self.settings.instantReload = value == true
-    self:_refreshWeaponMods(true)
+    self:_patchWeaponModules()
 end
 
 function Rage:SetMemoryNoRecoil(value)
     self.settings.memoryNoRecoil = value == true
-    self:_refreshWeaponMods(true)
+    self:_patchWeaponModules()
 end
 
 function Rage:SetNoSpread(value)
     self.settings.noSpread = value == true
-    self:_refreshWeaponMods(true)
+    self:_patchWeaponModules()
 end
 
 function Rage:SetInstaEquip(value)
     self.settings.instaEquip = value == true
-    self:_refreshWeaponMods(true)
+    self:_patchWeaponModules()
 end
 
 function Rage:SetAutoClicker(value)
     self.settings.autoClicker = value == true
-    self:_refreshWeaponMods(true)
+    self:_patchWeaponModules()
 end
 
 function Rage:SetAutoClickDelay(value)
     local number = tonumber(value)
     if number then
         self.settings.autoClickDelay = math.clamp(number, 10, 500)
-        self:_refreshWeaponMods(true)
+        self:_patchWeaponModules()
     end
 end
 
