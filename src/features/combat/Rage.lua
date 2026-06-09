@@ -44,6 +44,7 @@ function Rage.new(context)
     self._rcsAccumulator = 0
     self._lastRapidClick = 0
     self._silentAimHooks = {}
+    self._silentAimAttempted = false
     self._silentAimBound = false
     self._weaponDefaults = {}
     self._weaponModules = {}
@@ -433,9 +434,10 @@ function Rage:_initInventorySupport()
 end
 
 function Rage:_installSilentAimHooks()
-    if self._silentAimBound then
+    if self._silentAimAttempted then
         return
     end
+    self._silentAimAttempted = true
 
     if type(hookfunction) ~= "function" then
         return
@@ -471,25 +473,41 @@ function Rage:_installSilentAimHooks()
         self._silentAimHooks[weaponData] = true
         local originalRaycast = bullet._performRaycast
         local hookedRaycast = hookfunction(originalRaycast, function(bulletObject, spreadValue)
+            local adjustedSpread = spreadValue
+            if self.settings.noSpread then
+                if type(spreadValue) == "number" then
+                    adjustedSpread = 0
+                elseif typeof(spreadValue) == "Vector3" then
+                    adjustedSpread = Vector3.zero
+                elseif typeof(spreadValue) == "Vector2" then
+                    adjustedSpread = Vector2.zero
+                end
+            end
+
+            local okBase, baseResult = pcall(originalRaycast, bulletObject, adjustedSpread)
+            if not okBase or type(baseResult) ~= "table" then
+                return originalRaycast(bulletObject, adjustedSpread)
+            end
+
             if not self.settings.silentAim then
-                return originalRaycast(bulletObject, spreadValue)
+                return baseResult
             end
 
             local target = self:_getTargetData(self.settings.fovSize)
             if not target then
-                return originalRaycast(bulletObject, spreadValue)
+                return baseResult
             end
 
             if self.settings.dynamicMiss then
                 local hitChance = tonumber(self.settings.baseHitChance) or 100
                 if math.random(1, 100) > math.clamp(hitChance, 1, 100) then
-                    return originalRaycast(bulletObject, spreadValue)
+                    return baseResult
                 end
             end
 
             local camera = self:_getCamera()
             if not camera then
-                return originalRaycast(bulletObject, spreadValue)
+                return baseResult
             end
 
             local origin = camera.CFrame.Position
@@ -502,8 +520,8 @@ function Rage:_installSilentAimHooks()
                     elseif type(bulletObject.Range) == "number" then
                         range = bulletObject.Range
                     end
-                end
-            end)
+                    end
+                end)
 
             local params = RaycastParams.new()
             params.IgnoreWater = false
@@ -566,7 +584,6 @@ function Rage:_installSilentAimHooks()
         end))
     end
 
-    self._silentAimBound = true
     return true
 end
 
