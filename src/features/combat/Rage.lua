@@ -48,6 +48,7 @@ function Rage.new(context)
     self._silentAimBound = false
     self._weaponDefaults = {}
     self._weaponModules = {}
+    self._weaponTables = {}
 
     self.settings = {
         rageMode = false,
@@ -332,86 +333,122 @@ function Rage:_updateFovCircles()
 end
 
 function Rage:_patchWeaponModules()
-    local weaponsRoot = self.repStore:FindFirstChild("Weapons")
-        or (self.repStore:FindFirstChild("Database") and self.repStore.Database:FindFirstChild("Weapons"))
+    local collected = {}
 
-    if not weaponsRoot then
-        return
-    end
-
-    for _, object in ipairs(weaponsRoot:GetChildren()) do
-        if object:IsA("ModuleScript") and not self._weaponModules[object] then
-            local result = safeRequire(object)
-            if type(result) == "table" then
-                local hasField = false
-                for _, field in ipairs({
-                    "ReloadTime",
-                    "RecoilControl",
-                    "MaxSpread",
-                    "FireRate",
-                    "Auto",
-                    "EquipTime",
-                }) do
-                    if result[field] ~= nil then
-                        hasField = true
-                        break
+    local getter = getgc or (debug and debug.getgc)
+    if getter then
+        local ok, objects = pcall(getter, true)
+        if ok and type(objects) == "table" then
+            for _, object in ipairs(objects) do
+                if type(object) == "table" then
+                    local fireRate = rawget(object, "FireRate")
+                    if type(fireRate) == "number" then
+                        collected[object] = true
                     end
-                end
-
-                if hasField then
-                    self._weaponModules[object] = result
-                    self._weaponDefaults[object] = {
-                        ReloadTime = result.ReloadTime,
-                        RecoilControl = result.RecoilControl,
-                        MaxSpread = result.MaxSpread,
-                        FireRate = result.FireRate,
-                        Auto = result.Auto,
-                        EquipTime = result.EquipTime,
-                    }
                 end
             end
         end
     end
 
-    for module, data in pairs(self._weaponModules) do
-        local defaults = self._weaponDefaults[module]
-        if defaults then
-            if self.settings.instantReload then
-                data.ReloadTime = 0
-            else
-                data.ReloadTime = defaults.ReloadTime
-            end
+    local weaponsRoot = self.repStore:FindFirstChild("Weapons")
+        or (self.repStore:FindFirstChild("Database") and self.repStore.Database:FindFirstChild("Weapons"))
 
-            if self.settings.memoryNoRecoil or self.settings.rageMode then
-                data.RecoilControl = 0
-            else
-                data.RecoilControl = defaults.RecoilControl
-            end
+    if weaponsRoot then
+        for _, object in ipairs(weaponsRoot:GetChildren()) do
+            if object:IsA("ModuleScript") then
+                local result = safeRequire(object)
+                if type(result) == "table" then
+                    local hasField = false
+                    for _, field in ipairs({
+                        "ReloadTime",
+                        "RecoilControl",
+                        "MaxSpread",
+                        "FireRate",
+                        "Auto",
+                        "EquipTime",
+                    }) do
+                        if rawget(result, field) ~= nil then
+                            hasField = true
+                            break
+                        end
+                    end
 
-            if self.settings.noSpread or self.settings.rageMode then
-                data.MaxSpread = 0
-            else
-                data.MaxSpread = defaults.MaxSpread
+                    if hasField then
+                        collected[result] = true
+                    end
+                end
             end
+        end
+    end
 
-            if self.settings.rapidFire or self.settings.rageMode then
-                local delay = (tonumber(self.settings.rapidFireDelay) or 50) / 1000
-                data.FireRate = math.max(delay, 0.001)
-            else
-                data.FireRate = defaults.FireRate
-            end
+    for data in pairs(collected) do
+        if not self._weaponTables[data] then
+            self._weaponTables[data] = true
+            self._weaponDefaults[data] = {
+                ReloadTime = rawget(data, "ReloadTime"),
+                RecoilControl = rawget(data, "RecoilControl"),
+                MaxSpread = rawget(data, "MaxSpread"),
+                FireRate = rawget(data, "FireRate"),
+                Auto = rawget(data, "Auto"),
+                EquipTime = rawget(data, "EquipTime"),
+            }
+        end
+    end
 
-            if self.settings.instaEquip then
-                data.EquipTime = 0
-            else
-                data.EquipTime = defaults.EquipTime
-            end
+    local function setField(tbl, key, value)
+        if type(tbl) ~= "table" then
+            return
+        end
 
-            if self.settings.autoClicker then
-                data.Auto = true
-            else
-                data.Auto = defaults.Auto
-            end
+        if setreadonly then
+            pcall(setreadonly, tbl, false)
+        end
+
+        pcall(function()
+            rawset(tbl, key, value)
+        end)
+
+        if setreadonly then
+            pcall(setreadonly, tbl, true)
+        end
+    end
+
+    for data, defaults in pairs(self._weaponDefaults) do
+        if self.settings.instantReload then
+            setField(data, "ReloadTime", 0)
+        else
+            setField(data, "ReloadTime", defaults.ReloadTime)
+        end
+
+        if self.settings.memoryNoRecoil or self.settings.rageMode then
+            setField(data, "RecoilControl", 0)
+        else
+            setField(data, "RecoilControl", defaults.RecoilControl)
+        end
+
+        if self.settings.noSpread or self.settings.rageMode then
+            setField(data, "MaxSpread", 0)
+        else
+            setField(data, "MaxSpread", defaults.MaxSpread)
+        end
+
+        if self.settings.rapidFire or self.settings.rageMode then
+            local delay = (tonumber(self.settings.rapidFireDelay) or 50) / 1000
+            setField(data, "FireRate", math.max(delay, 0.001))
+        else
+            setField(data, "FireRate", defaults.FireRate)
+        end
+
+        if self.settings.instaEquip then
+            setField(data, "EquipTime", 0)
+        else
+            setField(data, "EquipTime", defaults.EquipTime)
+        end
+
+        if self.settings.autoClicker then
+            setField(data, "Auto", true)
+        else
+            setField(data, "Auto", defaults.Auto)
         end
     end
 end
@@ -855,39 +892,47 @@ end
 
 function Rage:SetRapidFire(value)
     self.settings.rapidFire = value == true
+    self:_patchWeaponModules()
 end
 
 function Rage:SetRapidFireDelay(value)
     local number = tonumber(value)
     if number then
         self.settings.rapidFireDelay = math.clamp(number, 1, 500)
+        self:_patchWeaponModules()
     end
 end
 
 function Rage:SetInstantReload(value)
     self.settings.instantReload = value == true
+    self:_patchWeaponModules()
 end
 
 function Rage:SetMemoryNoRecoil(value)
     self.settings.memoryNoRecoil = value == true
+    self:_patchWeaponModules()
 end
 
 function Rage:SetNoSpread(value)
     self.settings.noSpread = value == true
+    self:_patchWeaponModules()
 end
 
 function Rage:SetInstaEquip(value)
     self.settings.instaEquip = value == true
+    self:_patchWeaponModules()
 end
 
 function Rage:SetAutoClicker(value)
     self.settings.autoClicker = value == true
+    self:_patchWeaponModules()
 end
 
 function Rage:SetAutoClickDelay(value)
     local number = tonumber(value)
     if number then
         self.settings.autoClickDelay = math.clamp(number, 10, 500)
+        self:_patchWeaponModules()
     end
 end
 
