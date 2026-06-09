@@ -330,8 +330,14 @@ function Rage:_updateFovCircles()
 end
 
 function Rage:_patchWeaponModules()
-    local descendants = self.repStore:GetDescendants()
-    for _, object in ipairs(descendants) do
+    local weaponsRoot = self.repStore:FindFirstChild("Weapons")
+        or (self.repStore:FindFirstChild("Database") and self.repStore.Database:FindFirstChild("Weapons"))
+
+    if not weaponsRoot then
+        return
+    end
+
+    for _, object in ipairs(weaponsRoot:GetDescendants()) do
         if object:IsA("ModuleScript") and not self._weaponModules[object] then
             local result = safeRequire(object)
             if type(result) == "table" then
