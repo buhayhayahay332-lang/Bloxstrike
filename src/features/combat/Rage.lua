@@ -44,6 +44,7 @@ function Rage.new(context)
     self._rcsAccumulator = 0
     self._lastRapidClick = 0
     self._silentAimHooks = {}
+    self._silentAimBound = false
     self._weaponDefaults = {}
     self._weaponModules = {}
 
@@ -337,7 +338,7 @@ function Rage:_patchWeaponModules()
         return
     end
 
-    for _, object in ipairs(weaponsRoot:GetDescendants()) do
+    for _, object in ipairs(weaponsRoot:GetChildren()) do
         if object:IsA("ModuleScript") and not self._weaponModules[object] then
             local result = safeRequire(object)
             if type(result) == "table" then
@@ -415,105 +416,141 @@ function Rage:_patchWeaponModules()
 end
 
 function Rage:_installSilentAimHooks()
-    if type(hookfunction) ~= "function" or type(getgc) ~= "function" then
+    if self._silentAimBound then
         return
     end
 
-    local ok, objects = pcall(getgc, true)
-    if not ok or type(objects) ~= "table" then
+    if type(hookfunction) ~= "function" then
         return
     end
 
-    for _, object in ipairs(objects) do
-        if type(object) == "table" then
-            local okBullet, bullet = pcall(function()
-                return object.Bullet
+    if not self.inventoryController then
+        self:_initInventorySupport()
+    end
+
+    local controller = self.inventoryController
+    if type(controller) ~= "table" then
+        return
+    end
+
+    local function hookWeaponObject(weaponData)
+        if type(weaponData) ~= "table" then
+            return
+        end
+
+        local okBullet, bullet = pcall(function()
+            return weaponData.Bullet
+        end)
+        if not okBullet or type(bullet) ~= "table" then
+            return
+        end
+        if type(bullet._performRaycast) ~= "function" then
+            return
+        end
+        if self._silentAimHooks[weaponData] then
+            return
+        end
+
+        self._silentAimHooks[weaponData] = true
+        local originalRaycast = bullet._performRaycast
+        local hookedRaycast = hookfunction(originalRaycast, function(bulletObject, spreadValue)
+            if not self.settings.silentAim then
+                return originalRaycast(bulletObject, spreadValue)
+            end
+
+            local target = self:_getTargetData(self.settings.fovSize)
+            if not target then
+                return originalRaycast(bulletObject, spreadValue)
+            end
+
+            if self.settings.dynamicMiss then
+                local hitChance = tonumber(self.settings.baseHitChance) or 100
+                if math.random(1, 100) > math.clamp(hitChance, 1, 100) then
+                    return originalRaycast(bulletObject, spreadValue)
+                end
+            end
+
+            local camera = self:_getCamera()
+            if not camera then
+                return originalRaycast(bulletObject, spreadValue)
+            end
+
+            local origin = camera.CFrame.Position
+            local direction = (target.pos - origin).Unit
+            local range = 500
+            pcall(function()
+                if type(bulletObject) == "table" then
+                    if type(bulletObject.Properties) == "table" and type(bulletObject.Properties.Range) == "number" then
+                        range = bulletObject.Properties.Range
+                    elseif type(bulletObject.Range) == "number" then
+                        range = bulletObject.Range
+                    end
+                end
             end)
 
-            if okBullet
-                and type(bullet) == "table"
-                and type(bullet._performRaycast) == "function"
-                and not self._silentAimHooks[object]
-            then
-                local original = bullet._performRaycast
-                self._silentAimHooks[object] = true
-
-                hookfunction(original, function(bulletObject, spreadValue)
-                    if not self.settings.silentAim then
-                        return original(bulletObject, spreadValue)
-                    end
-
-                    local target = self:_getTargetData(self.settings.fovSize)
-                    if not target then
-                        return original(bulletObject, spreadValue)
-                    end
-
-                    if self.settings.dynamicMiss then
-                        local hitChance = tonumber(self.settings.baseHitChance) or 100
-                        if math.random(1, 100) > math.clamp(hitChance, 1, 100) then
-                            return original(bulletObject, spreadValue)
-                        end
-                    end
-
-                    local camera = self:_getCamera()
-                    if not camera then
-                        return original(bulletObject, spreadValue)
-                    end
-
-                    local origin = camera.CFrame.Position
-                    local direction = (target.pos - origin).Unit
-                    local range = 500
-                    pcall(function()
-                        if type(bulletObject) == "table" then
-                            if type(bulletObject.Properties) == "table" and type(bulletObject.Properties.Range) == "number" then
-                                range = bulletObject.Properties.Range
-                            elseif type(bulletObject.Range) == "number" then
-                                range = bulletObject.Range
-                            end
-                        end
-                    end)
-
-                    local params = RaycastParams.new()
-                    params.IgnoreWater = false
-                    if self.settings.wallbang then
-                        params.FilterType = Enum.RaycastFilterType.Include
-                    else
-                        params.FilterType = Enum.RaycastFilterType.Exclude
-                    end
-
-                    local filter = { camera }
-                    local character = self.player and self.player.Character
-                    if character then
-                        filter[#filter + 1] = character
-                    end
-                    params.FilterDescendantsInstances = filter
-
-                    local distance = (target.pos - origin).Magnitude
-                    local raycast = self.workspace:Raycast(origin, direction * math.max(range, distance + 10), params)
-                    local hitPos = raycast and raycast.Position or target.pos
-                    local hitInstance = raycast and raycast.Instance or target.part
-                    local hitMaterial = raycast and raycast.Material.Name or "Plastic"
-                    local hitNormal = raycast and raycast.Normal or Vector3.new(0, 1, 0)
-
-                    return {
-                        Origin = origin,
-                        Direction = direction,
-                        Hits = {
-                            {
-                                Position = hitPos,
-                                Instance = hitInstance,
-                                Material = hitMaterial,
-                                Normal = hitNormal,
-                                Exit = false,
-                            },
-                        },
-                        Distance = (hitPos - origin).Magnitude,
-                    }
-                end)
+            local params = RaycastParams.new()
+            params.IgnoreWater = false
+            if self.settings.wallbang then
+                params.FilterType = Enum.RaycastFilterType.Include
+            else
+                params.FilterType = Enum.RaycastFilterType.Exclude
             end
+
+            local filter = { camera }
+            local character = self.player and self.player.Character
+            if character then
+                filter[#filter + 1] = character
+            end
+            params.FilterDescendantsInstances = filter
+
+            local distance = (target.pos - origin).Magnitude
+            local raycast = self.workspace:Raycast(origin, direction * math.max(range, distance + 10), params)
+            local hitPos = raycast and raycast.Position or target.pos
+            local hitInstance = raycast and raycast.Instance or target.part
+            local hitMaterial = raycast and raycast.Material.Name or "Plastic"
+            local hitNormal = raycast and raycast.Normal or Vector3.new(0, 1, 0)
+
+            return {
+                Origin = origin,
+                Direction = direction,
+                Hits = {
+                    {
+                        Position = hitPos,
+                        Instance = hitInstance,
+                        Material = hitMaterial,
+                        Normal = hitNormal,
+                        Exit = false,
+                    },
+                },
+                Distance = (hitPos - origin).Magnitude,
+            }
+        end)
+
+        if type(hookedRaycast) == "function" then
+            return hookedRaycast
         end
     end
 
+    local okCurrent, current = pcall(function()
+        if type(controller.getCurrentEquipped) == "function" then
+            return controller.getCurrentEquipped()
+        end
+        return nil
+    end)
+    if okCurrent and current then
+        hookWeaponObject(current)
+    end
+
+    local equippedEvent = controller.OnInventoryItemEquipped
+    if equippedEvent and not self._silentAimBound then
+        self._silentAimBound = true
+        self.cleaner:Give(self.errorHandler:Connect(equippedEvent, "Rage Inventory Equipped", function(_, equipped)
+            hookWeaponObject(equipped)
+        end))
+    end
+
+    self._silentAimBound = true
+    return true
 end
 
 function Rage:_updateAimlock(dt)
