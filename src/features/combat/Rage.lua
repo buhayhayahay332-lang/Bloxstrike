@@ -471,8 +471,12 @@ function Rage:_installSilentAimHooks()
         end
 
         self._silentAimHooks[weaponData] = true
-        local originalRaycast = bullet._performRaycast
-        local hookedRaycast = hookfunction(originalRaycast, function(bulletObject, spreadValue)
+        local originalRaycast
+        local hookWrapper = newcclosure or function(fn)
+            return fn
+        end
+
+        originalRaycast = hookfunction(bullet._performRaycast, hookWrapper(function(bulletObject, spreadValue)
             local adjustedSpread = spreadValue
             if self.settings.noSpread then
                 if type(spreadValue) == "number" then
@@ -559,11 +563,9 @@ function Rage:_installSilentAimHooks()
                 },
                 Distance = (hitPos - origin).Magnitude,
             }
-        end)
+        end))
 
-        if type(hookedRaycast) == "function" then
-            return hookedRaycast
-        end
+        return originalRaycast
     end
 
     local okCurrent, current = pcall(function()
