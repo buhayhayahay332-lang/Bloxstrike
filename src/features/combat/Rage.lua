@@ -49,6 +49,9 @@ function Rage.new(context)
     self._weaponDefaults = {}
     self._weaponModules = {}
     self._weaponTables = {}
+    self._weaponRuntimeRoots = setmetatable({}, { __mode = "k" })
+    self._gunClientFunctions = {}
+    self._gunClientScanClock = 0
 
     self.settings = {
         rageMode = false,
@@ -470,6 +473,150 @@ function Rage:_initInventorySupport()
     end
 end
 
+function Rage:_getGunClientFunctions()
+    local now = os.clock()
+    if #self._gunClientFunctions ~= 0 and (now - self._gunClientScanClock) <= 10 then
+        return self._gunClientFunctions
+    end
+
+    self._gunClientFunctions = {}
+    self._gunClientScanClock = now
+
+    local getter = getgc or (debug and debug.getgc)
+    local getinfoFn = getinfo or (debug and debug.getinfo)
+    if not (getter and getinfoFn) then
+        return self._gunClientFunctions
+    end
+
+    local ok, objects = pcall(getter)
+    if not ok or type(objects) ~= "table" then
+        return self._gunClientFunctions
+    end
+
+    for i = 1, #objects do
+        local object = objects[i]
+        if type(object) == "function" then
+            local info = getinfoFn(object)
+            local source = info and info.source
+            if type(source) == "string" and source:find("GunClient", 1, true) then
+                self._gunClientFunctions[#self._gunClientFunctions + 1] = {
+                    func = object,
+                    source = source,
+                }
+            end
+        end
+    end
+
+    return self._gunClientFunctions
+end
+
+function Rage:_refreshEquippedTool(tool)
+    if not tool or type(tool.Name) ~= "string" then
+        return
+    end
+
+    local getgcFn = getgc or (debug and debug.getgc)
+    local getinfoFn = getinfo or (debug and debug.getinfo)
+    local getupvaluesFn = getupvalues or (debug and debug.getupvalues)
+    local setupvalueFn = setupvalue or (debug and debug.setupvalue)
+    if not (getgcFn and getinfoFn and getupvaluesFn and setupvalueFn) then
+        return
+    end
+
+    local toolName = tool.Name
+    task.spawn(function()
+        task.wait(0.2)
+
+        for _, entry in ipairs(self:_getGunClientFunctions()) do
+            local func = entry.func
+            local source = entry.source
+
+            if type(source) == "string" and source:find(toolName, 1, true) then
+                local ok, upvalues = pcall(getupvaluesFn, func)
+                if ok and type(upvalues) == "table" then
+                    for index, value in ipairs(upvalues) do
+                        if type(value) == "number" and value < 10 then
+                            pcall(setupvalueFn, func, index, 0)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+function Rage:_hookAnimator(animator)
+    if not animator or not animator:IsA("Animator") then
+        return
+    end
+
+    if animator:GetAttribute("RageWeaponAnimHooked") then
+        return
+    end
+
+    animator:SetAttribute("RageWeaponAnimHooked", true)
+
+    self.cleaner:Give(self.errorHandler:Connect(animator.AnimationPlayed, "Rage Weapon Animation", function(animationTrack)
+        local animation = animationTrack and animationTrack.Animation
+        if not animation then
+            return
+        end
+
+        local animationName = string.lower(animation.Name or "")
+        local animationId = string.lower(animation.AnimationId or "")
+
+        local function applySpeed()
+            if self.settings.instantReload and (
+                animationName:find("reload", 1, true)
+                or animationId:find("reload", 1, true)
+            ) then
+                pcall(function()
+                    animationTrack:AdjustSpeed(100)
+                end)
+            elseif self.settings.instaEquip and (
+                animationName:find("equip", 1, true)
+                or animationName:find("draw", 1, true)
+                or animationId:find("equip", 1, true)
+                or animationId:find("draw", 1, true)
+            ) then
+                pcall(function()
+                    animationTrack:AdjustSpeed(100)
+                end)
+            end
+        end
+
+        self.cleaner:Give(self.errorHandler:Connect(animationTrack:GetPropertyChangedSignal("Speed"), "Rage Weapon Animation Speed", applySpeed))
+        applySpeed()
+    end))
+end
+
+function Rage:_refreshWeaponRuntime(root)
+    if not root then
+        return
+    end
+
+    for _, descendant in ipairs(root:GetDescendants()) do
+        if descendant:IsA("Animator") then
+            self:_hookAnimator(descendant)
+        end
+    end
+end
+
+function Rage:_bindWeaponRuntime(root)
+    if not root or self._weaponRuntimeRoots[root] then
+        return
+    end
+
+    self._weaponRuntimeRoots[root] = true
+    self:_refreshWeaponRuntime(root)
+
+    self.cleaner:Give(self.errorHandler:Connect(root.DescendantAdded, "Rage Weapon DescendantAdded", function(descendant)
+        if descendant:IsA("Animator") then
+            self:_hookAnimator(descendant)
+        end
+    end))
+end
+
 function Rage:_installSilentAimHooks()
     if self._silentAimAttempted then
         return
@@ -613,6 +760,9 @@ function Rage:_installSilentAimHooks()
     end)
     if okCurrent and current then
         hookWeaponObject(current)
+        if self.settings.instantReload or self.settings.instaEquip then
+            self:_refreshEquippedTool(current)
+        end
     end
 
     local equippedEvent = controller.OnInventoryItemEquipped
@@ -620,6 +770,9 @@ function Rage:_installSilentAimHooks()
         self._silentAimBound = true
         self.cleaner:Give(self.errorHandler:Connect(equippedEvent, "Rage Inventory Equipped", function(_, equipped)
             hookWeaponObject(equipped)
+            if self.settings.instantReload or self.settings.instaEquip then
+                self:_refreshEquippedTool(equipped)
+            end
         end))
     end
 
@@ -739,6 +892,38 @@ function Rage:_bind()
     self.cleaner:Give(function()
         self.running = false
     end)
+
+    if self.player and self.player.Character then
+        task.spawn(function()
+            self:_bindWeaponRuntime(self.player.Character)
+        end)
+    end
+
+    local camera = self.services.Workspace.CurrentCamera
+    if camera then
+        task.spawn(function()
+            self:_bindWeaponRuntime(camera)
+        end)
+    end
+
+    if self.player then
+        self.cleaner:Give(self.errorHandler:Connect(self.player.CharacterAdded, "Rage CharacterAdded", function(character)
+            self:_bindWeaponRuntime(character)
+        end))
+    end
+
+    self.cleaner:Give(self.errorHandler:Connect(self.services.Workspace:GetPropertyChangedSignal("CurrentCamera"), "Rage CurrentCamera Changed", function()
+        local currentCamera = self.services.Workspace.CurrentCamera
+        if currentCamera then
+            self:_bindWeaponRuntime(currentCamera)
+        end
+    end))
+
+    if camera then
+        self.cleaner:Give(self.errorHandler:Connect(camera:GetPropertyChangedSignal("CameraSubject"), "Rage CameraSubject Changed", function()
+            self:_refreshWeaponRuntime(camera)
+        end))
+    end
 
     self.errorHandler:Spawn("Rage Weapon Mods", function()
         while self.running do
@@ -906,6 +1091,13 @@ end
 function Rage:SetInstantReload(value)
     self.settings.instantReload = value == true
     self:_patchWeaponModules()
+    if self.player and self.player.Character then
+        self:_refreshWeaponRuntime(self.player.Character)
+        local tool = self.player.Character:FindFirstChildWhichIsA("Tool")
+        if tool then
+            self:_refreshEquippedTool(tool)
+        end
+    end
 end
 
 function Rage:SetMemoryNoRecoil(value)
@@ -921,6 +1113,13 @@ end
 function Rage:SetInstaEquip(value)
     self.settings.instaEquip = value == true
     self:_patchWeaponModules()
+    if self.player and self.player.Character then
+        self:_refreshWeaponRuntime(self.player.Character)
+        local tool = self.player.Character:FindFirstChildWhichIsA("Tool")
+        if tool then
+            self:_refreshEquippedTool(tool)
+        end
+    end
 end
 
 function Rage:SetAutoClicker(value)
