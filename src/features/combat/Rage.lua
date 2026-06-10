@@ -49,9 +49,9 @@ function Rage.new(context)
     self._weaponDefaults = {}
     self._weaponModules = {}
     self._weaponTables = {}
-    self._weaponRuntimeRoots = setmetatable({}, { __mode = "k" })
-    self._gunClientFunctions = {}
-    self._gunClientScanClock = 0
+    self._rapidFireTables = setmetatable({}, { __mode = "k" })
+    self._rapidFireDefaults = setmetatable({}, { __mode = "k" })
+    self._rapidFireScanClock = 0
 
     self.settings = {
         rageMode = false,
@@ -435,13 +435,6 @@ function Rage:_patchWeaponModules()
             setField(data, "MaxSpread", defaults.MaxSpread)
         end
 
-        if self.settings.rapidFire or self.settings.rageMode then
-            local delay = (tonumber(self.settings.rapidFireDelay) or 50) / 1000
-            setField(data, "FireRate", math.max(delay, 0.001))
-        else
-            setField(data, "FireRate", defaults.FireRate)
-        end
-
         if self.settings.instaEquip then
             setField(data, "EquipTime", 0)
         else
@@ -471,6 +464,97 @@ function Rage:_initInventorySupport()
     if type(result) == "table" then
         self.inventoryController = result
     end
+end
+
+function Rage:_getRapidFireTables()
+    local now = os.clock()
+    if (now - self._rapidFireScanClock) <= 10 and next(self._rapidFireTables) then
+        return self._rapidFireTables
+    end
+
+    self._rapidFireScanClock = now
+    self._rapidFireTables = setmetatable({}, { __mode = "k" })
+
+    local getter = getgc or (debug and debug.getgc)
+    if not getter then
+        return self._rapidFireTables
+    end
+
+    local ok, objects = pcall(getter, true)
+    if not ok or type(objects) ~= "table" then
+        return self._rapidFireTables
+    end
+
+    for _, object in ipairs(objects) do
+        if type(object) == "table" then
+            local fireRate = rawget(object, "FireRate")
+            if type(fireRate) == "number" then
+                self._rapidFireTables[object] = true
+                if self._rapidFireDefaults[object] == nil then
+                    self._rapidFireDefaults[object] = fireRate
+                end
+            end
+        end
+    end
+
+    return self._rapidFireTables
+end
+
+function Rage:_applyRapidFire()
+    local getter = getgc or (debug and debug.getgc)
+    local setReadOnlyFn = setreadonly
+
+    if not getter then
+        return
+    end
+
+    local rapidEnabled = self.settings.rapidFire or self.settings.rageMode
+    local delaySeconds = math.max((tonumber(self.settings.rapidFireDelay) or 50) / 1000, 0.001)
+    local tables = self:_getRapidFireTables()
+
+    if not rapidEnabled then
+        pcall(function()
+            for weaponTable, defaultFireRate in pairs(self._rapidFireDefaults) do
+                local current = rawget(weaponTable, "FireRate")
+                if type(current) == "number" and current < 5E-2 then
+                    if setReadOnlyFn then
+                        pcall(setReadOnlyFn, weaponTable, false)
+                    end
+
+                    rawset(weaponTable, "FireRate", defaultFireRate)
+
+                    if setReadOnlyFn then
+                        pcall(setReadOnlyFn, weaponTable, true)
+                    end
+                end
+            end
+        end)
+        return
+    end
+
+    pcall(function()
+        for weaponTable in pairs(tables) do
+            local current = rawget(weaponTable, "FireRate")
+            if type(current) == "number" and current > 5E-2 then
+                if self._rapidFireDefaults[weaponTable] == nil then
+                    self._rapidFireDefaults[weaponTable] = current
+                end
+
+                if setReadOnlyFn then
+                    pcall(setReadOnlyFn, weaponTable, false)
+                end
+
+                rawset(weaponTable, "FireRate", delaySeconds)
+                if rawget(weaponTable, "Auto") ~= nil then
+                    rawset(weaponTable, "Auto", true)
+                end
+
+                if setReadOnlyFn then
+                    pcall(setReadOnlyFn, weaponTable, true)
+                end
+            end
+        end
+    end)
 end
 
 function Rage:_getGunClientFunctions()
@@ -617,33 +701,6 @@ function Rage:_bindWeaponRuntime(root)
     end))
 end
 
-function Rage:_queueWeaponPatchBurst()
-    if self._weaponPatchBurstActive then
-        return
-    end
-
-    self._weaponPatchBurstActive = true
-    self._weaponPatchBurstToken = (self._weaponPatchBurstToken or 0) + 1
-    local token = self._weaponPatchBurstToken
-
-    task.spawn(function()
-        for _ = 1, 5 do
-            if not self.running or self._weaponPatchBurstToken ~= token then
-                break
-            end
-
-            pcall(function()
-                self:_patchWeaponModules()
-            end)
-            task.wait(0.35)
-        end
-
-        if self._weaponPatchBurstToken == token then
-            self._weaponPatchBurstActive = false
-        end
-    end)
-end
-
 function Rage:_installSilentAimHooks()
     if self._silentAimAttempted then
         return
@@ -787,7 +844,6 @@ function Rage:_installSilentAimHooks()
     end)
     if okCurrent and current then
         hookWeaponObject(current)
-        self:_queueWeaponPatchBurst()
     end
 
     local equippedEvent = controller.OnInventoryItemEquipped
@@ -795,7 +851,6 @@ function Rage:_installSilentAimHooks()
         self._silentAimBound = true
         self.cleaner:Give(self.errorHandler:Connect(equippedEvent, "Rage Inventory Equipped", function(_, equipped)
             hookWeaponObject(equipped)
-            self:_queueWeaponPatchBurst()
         end))
     end
 
@@ -920,7 +975,6 @@ function Rage:_bind()
         task.spawn(function()
             self:_bindWeaponRuntime(self.player.Character)
         end)
-        self:_queueWeaponPatchBurst()
     end
 
     local camera = self.services.Workspace.CurrentCamera
@@ -933,7 +987,6 @@ function Rage:_bind()
     if self.player then
         self.cleaner:Give(self.errorHandler:Connect(self.player.CharacterAdded, "Rage CharacterAdded", function(character)
             self:_bindWeaponRuntime(character)
-            self:_queueWeaponPatchBurst()
         end))
     end
 
@@ -949,6 +1002,17 @@ function Rage:_bind()
             self:_refreshWeaponRuntime(camera)
         end))
     end
+
+    self.errorHandler:Spawn("Rage Rapid Fire", function()
+        while self.running do
+            self:_applyRapidFire()
+            task.wait(3)
+        end
+    end)
+
+    task.spawn(function()
+        self:_applyRapidFire()
+    end)
 
     self.errorHandler:Spawn("Rage Weapon Mods", function()
         while self.running do
@@ -991,9 +1055,7 @@ end
 
 function Rage:SetRageMode(value)
     self.settings.rageMode = value == true
-    if self.settings.rageMode then
-        self:_queueWeaponPatchBurst()
-    end
+    self:_applyRapidFire()
 end
 
 function Rage:SetRageToggleKey(value)
@@ -1105,20 +1167,14 @@ end
 
 function Rage:SetRapidFire(value)
     self.settings.rapidFire = value == true
-    self:_patchWeaponModules()
-    if self.settings.rapidFire then
-        self:_queueWeaponPatchBurst()
-    end
+    self:_applyRapidFire()
 end
 
 function Rage:SetRapidFireDelay(value)
     local number = tonumber(value)
     if number then
         self.settings.rapidFireDelay = math.clamp(number, 1, 500)
-        self:_patchWeaponModules()
-        if self.settings.rapidFire then
-            self:_queueWeaponPatchBurst()
-        end
+        self:_applyRapidFire()
     end
 end
 
