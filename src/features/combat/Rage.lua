@@ -617,6 +617,33 @@ function Rage:_bindWeaponRuntime(root)
     end))
 end
 
+function Rage:_queueWeaponPatchBurst()
+    if self._weaponPatchBurstActive then
+        return
+    end
+
+    self._weaponPatchBurstActive = true
+    self._weaponPatchBurstToken = (self._weaponPatchBurstToken or 0) + 1
+    local token = self._weaponPatchBurstToken
+
+    task.spawn(function()
+        for _ = 1, 5 do
+            if not self.running or self._weaponPatchBurstToken ~= token then
+                break
+            end
+
+            pcall(function()
+                self:_patchWeaponModules()
+            end)
+            task.wait(0.35)
+        end
+
+        if self._weaponPatchBurstToken == token then
+            self._weaponPatchBurstActive = false
+        end
+    end)
+end
+
 function Rage:_installSilentAimHooks()
     if self._silentAimAttempted then
         return
@@ -760,9 +787,7 @@ function Rage:_installSilentAimHooks()
     end)
     if okCurrent and current then
         hookWeaponObject(current)
-        if self.settings.instantReload or self.settings.instaEquip then
-            self:_refreshEquippedTool(current)
-        end
+        self:_queueWeaponPatchBurst()
     end
 
     local equippedEvent = controller.OnInventoryItemEquipped
@@ -770,9 +795,7 @@ function Rage:_installSilentAimHooks()
         self._silentAimBound = true
         self.cleaner:Give(self.errorHandler:Connect(equippedEvent, "Rage Inventory Equipped", function(_, equipped)
             hookWeaponObject(equipped)
-            if self.settings.instantReload or self.settings.instaEquip then
-                self:_refreshEquippedTool(equipped)
-            end
+            self:_queueWeaponPatchBurst()
         end))
     end
 
@@ -897,6 +920,7 @@ function Rage:_bind()
         task.spawn(function()
             self:_bindWeaponRuntime(self.player.Character)
         end)
+        self:_queueWeaponPatchBurst()
     end
 
     local camera = self.services.Workspace.CurrentCamera
@@ -909,6 +933,7 @@ function Rage:_bind()
     if self.player then
         self.cleaner:Give(self.errorHandler:Connect(self.player.CharacterAdded, "Rage CharacterAdded", function(character)
             self:_bindWeaponRuntime(character)
+            self:_queueWeaponPatchBurst()
         end))
     end
 
@@ -966,6 +991,9 @@ end
 
 function Rage:SetRageMode(value)
     self.settings.rageMode = value == true
+    if self.settings.rageMode then
+        self:_queueWeaponPatchBurst()
+    end
 end
 
 function Rage:SetRageToggleKey(value)
@@ -1078,6 +1106,9 @@ end
 function Rage:SetRapidFire(value)
     self.settings.rapidFire = value == true
     self:_patchWeaponModules()
+    if self.settings.rapidFire then
+        self:_queueWeaponPatchBurst()
+    end
 end
 
 function Rage:SetRapidFireDelay(value)
@@ -1085,19 +1116,15 @@ function Rage:SetRapidFireDelay(value)
     if number then
         self.settings.rapidFireDelay = math.clamp(number, 1, 500)
         self:_patchWeaponModules()
+        if self.settings.rapidFire then
+            self:_queueWeaponPatchBurst()
+        end
     end
 end
 
 function Rage:SetInstantReload(value)
     self.settings.instantReload = value == true
     self:_patchWeaponModules()
-    if self.player and self.player.Character then
-        self:_refreshWeaponRuntime(self.player.Character)
-        local tool = self.player.Character:FindFirstChildWhichIsA("Tool")
-        if tool then
-            self:_refreshEquippedTool(tool)
-        end
-    end
 end
 
 function Rage:SetMemoryNoRecoil(value)
@@ -1113,13 +1140,6 @@ end
 function Rage:SetInstaEquip(value)
     self.settings.instaEquip = value == true
     self:_patchWeaponModules()
-    if self.player and self.player.Character then
-        self:_refreshWeaponRuntime(self.player.Character)
-        local tool = self.player.Character:FindFirstChildWhichIsA("Tool")
-        if tool then
-            self:_refreshEquippedTool(tool)
-        end
-    end
 end
 
 function Rage:SetAutoClicker(value)
