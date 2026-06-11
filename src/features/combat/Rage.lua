@@ -334,26 +334,10 @@ function Rage:_updateFovCircles()
 end
 
 function Rage:_patchWeaponModules()
-    local collected = {}
-
-    local getter = getgc or (debug and debug.getgc)
-    if getter then
-        local ok, objects = pcall(getter, true)
-        if ok and type(objects) == "table" then
-            for _, object in ipairs(objects) do
-                if type(object) == "table" then
-                    local fireRate = rawget(object, "FireRate")
-                    if type(fireRate) == "number" then
-                        collected[object] = true
-                    end
-                end
-            end
-        end
-    end
-
     local weaponsRoot = self.repStore:FindFirstChild("Weapons")
         or (self.repStore:FindFirstChild("Database") and self.repStore.Database:FindFirstChild("Weapons"))
 
+    local collected = {}
     if weaponsRoot then
         for _, object in ipairs(weaponsRoot:GetChildren()) do
             if object:IsA("ModuleScript") then
@@ -389,7 +373,6 @@ function Rage:_patchWeaponModules()
                 ReloadTime = rawget(data, "ReloadTime"),
                 RecoilControl = rawget(data, "RecoilControl"),
                 MaxSpread = rawget(data, "MaxSpread"),
-                FireRate = rawget(data, "FireRate"),
                 Auto = rawget(data, "Auto"),
                 EquipTime = rawget(data, "EquipTime"),
             }
@@ -1077,19 +1060,6 @@ function Rage:SetFovSize(value)
     local number = tonumber(value)
     if number then
         self.settings.fovSize = math.clamp(number, 50, 1000)
-    end
-end
-
-function Rage:SetRapidFire(value)
-    self.settings.rapidFire = value == true
-    self:_patchWeaponModules()
-end
-
-function Rage:SetRapidFireDelay(value)
-    local number = tonumber(value)
-    if number then
-        self.settings.rapidFireDelay = math.clamp(number, 1, 500)
-        self:_patchWeaponModules()
     end
 end
 
