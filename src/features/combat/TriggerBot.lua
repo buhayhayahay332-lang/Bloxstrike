@@ -47,11 +47,15 @@ function TriggerBot.new(context)
                                 task.wait(self.settings.delayMs / 1000)
                             end
 
-                            if mouse1click then
-                                mouse1click()
+                            if mouse1press then
+                                mouse1press()
                             end
 
                             task.wait(0.05)
+                            else
+                                 if mouse1release then
+                                mouse1release()
+                            end
                         end
                     end
                 end
