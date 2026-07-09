@@ -52,8 +52,8 @@ function TriggerBot.new(context)
                             end
 
                             task.wait(0.05)
-                            else
-                                 if mouse1release then
+
+                            if mouse1release then
                                 mouse1release()
                             end
                         end
