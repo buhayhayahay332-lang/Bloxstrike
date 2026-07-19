@@ -133,15 +133,31 @@ local function getMoney(player)
         or getValue(player:FindFirstChild("leaderstats")) or getValue(player) or getValue(character)
 end
 
+local function cleanWeaponName(raw)
+    if type(raw) ~= "string" or raw == "" or raw == "None" then return nil end
+
+    if string.sub(raw, 1, 1) == "{" then
+        local ok, decoded = pcall(function()
+            return game:GetService("HttpService"):JSONDecode(raw)
+        end)
+        if ok and type(decoded) == "table" then
+            raw = decoded.name or decoded.Name or decoded._id or decoded.weapon or decoded.Weapon
+        end
+    end
+
+    if type(raw) ~= "string" or raw == "" or raw == "None" then return nil end
+    return raw
+end
+
 local function getWeapon(player, character)
     local raw = character:GetAttribute("CurrentEquipped") or character:GetAttribute("Weapon") or character:GetAttribute("Equipped")
         or player:GetAttribute("CurrentEquipped") or player:GetAttribute("Weapon") or player:GetAttribute("Equipped") or player:GetAttribute("CurrentWeapon")
-    if type(raw) == "string" and raw ~= "" and raw ~= "None" then return raw end
+    local equipped = cleanWeaponName(raw)
+    if equipped then return equipped end
+
     local tool = character:FindFirstChildWhichIsA("Tool")
     if tool then return tool.Name end
-    for _, child in ipairs(character:GetChildren()) do
-        if child:IsA("Model") and child.Name ~= "AnimeModel" then return child.Name end
-    end
+
     return "None"
 end
 
@@ -458,7 +474,7 @@ function ESP.new(context)
         showSkeleton = false, showHeadDot = false, showTracers = false, showWeapon = false, showMoney = false,
         showFlags = false, showChams = false, maxDistance = 0, rainbow = false, rainbowSpeed = 2.0,
         boxColor = Color3.fromRGB(255, 255, 255), textColor = Color3.fromRGB(255, 255, 255), skeletonColor = Color3.fromRGB(255, 255, 255),
-        tracerColor = Color3.fromRGB(255, 51, 153), headDotColor = Color3.fromRGB(255, 255, 255), textSize = 11, boxThickness = 1, refreshRate = 120,
+        tracerColor = Color3.fromRGB(255, 255, 255), headDotColor = Color3.fromRGB(255, 255, 255), textSize = 11, boxThickness = 1, refreshRate = 120,
     }
 
     local parent = getGuiParent()
@@ -514,7 +530,7 @@ function ESP:Update()
     if not camera then return end
     for _, object in pairs(self.objects) do
         local ok, err = pcall(function() object:Update(camera, self.localPlayer) end)
-        if not ok then warn("[Wyvern ESP Error]: " .. tostring(err)); object:Hide() end
+        if not ok then warn("[ASTRO ESP Error]: " .. tostring(err)); object:Hide() end
     end
 end
 
