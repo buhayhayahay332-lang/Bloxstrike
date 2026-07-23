@@ -50,6 +50,7 @@ function Rage.new(context)
     self._weaponModules = {}
     self._weaponTables = {}
     self._weaponRuntimeRoots = setmetatable({}, { __mode = "k" })
+    self._lastWeaponGcScan = 0
     self._gunClientFunctions = {}
     self._gunClientScanClock = 0
 
@@ -366,6 +367,23 @@ function Rage:_patchWeaponModules()
         end
     end
 
+    local getter = getgc or (debug and debug.getgc)
+    if getter and (os.clock() - self._lastWeaponGcScan) > 10 then
+        self._lastWeaponGcScan = os.clock()
+
+        local ok, objects = pcall(getter, true)
+        if ok and type(objects) == "table" then
+            for _, object in ipairs(objects) do
+                if type(object) == "table" then
+                    local fireRate = rawget(object, "FireRate")
+                    if type(fireRate) == "number" then
+                        collected[object] = true
+                    end
+                end
+            end
+        end
+    end
+
     for data in pairs(collected) do
         if not self._weaponTables[data] then
             self._weaponTables[data] = true
@@ -373,6 +391,7 @@ function Rage:_patchWeaponModules()
                 ReloadTime = rawget(data, "ReloadTime"),
                 RecoilControl = rawget(data, "RecoilControl"),
                 MaxSpread = rawget(data, "MaxSpread"),
+                FireRate = rawget(data, "FireRate"),
                 Auto = rawget(data, "Auto"),
                 EquipTime = rawget(data, "EquipTime"),
             }
@@ -416,13 +435,20 @@ function Rage:_patchWeaponModules()
             setField(data, "MaxSpread", defaults.MaxSpread)
         end
 
+        if self.settings.autoClicker or self.settings.rageMode then
+            local rapidDelay = (tonumber(self.settings.autoClickDelay) or 50) / 1000
+            setField(data, "FireRate", math.max(rapidDelay, 0.001))
+        else
+            setField(data, "FireRate", defaults.FireRate)
+        end
+
         if self.settings.instaEquip then
             setField(data, "EquipTime", 0)
         else
             setField(data, "EquipTime", defaults.EquipTime)
         end
 
-        if self.settings.autoClicker then
+        if self.settings.autoClicker or self.settings.rageMode then
             setField(data, "Auto", true)
         else
             setField(data, "Auto", defaults.Auto)

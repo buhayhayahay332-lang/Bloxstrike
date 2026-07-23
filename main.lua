@@ -221,25 +221,33 @@ window:addSlider("Hitbox Transparency", 0, 1, 0.5, 0.05, safeUi("Hitbox Transpar
     features.hitbox:SetTransparency(value)
 end))
 
+--[[
 window:addSection("Rage")
 window:addToggle("Rage Mode", false, safeUi("Rage Mode", function(value)
     features.rage:SetRageMode(value)
 end))
+]]
+
 --[[
 window:addKeybind("Rage Toggle Key", Enum.KeyCode.Unknown, safeUi("Rage Toggle Key", function(value)
     features.rage:SetRageToggleKey(value)
 end))
 ]]
+
+--[[
 window:addSection("Aimlock")
 window:addToggle("Aimlock", false, safeUi("Aimlock", function(value)
     features.rage:SetAimlock(value)
 end))
+]]
+
 --[[window:addKeybind("Aimlock Toggle Key", Enum.KeyCode.Unknown, safeUi("Aimlock Toggle Key", function(value)
     features.rage:SetAimlockToggleKey(value)
 end))
 window:addKeybind("Aimlock HoldKey", Enum.UserInputType.MouseButton2, safeUi("Aimlock HoldKey", function(value)
     features.rage:SetAimlockHoldKey(value)
 end))]]
+--[[
 window:addDropdown("Aimlock Method", { "Raw Mouse" }, "Raw Mouse", safeUi("Aimlock Method", function(value)
     features.rage:SetAimlockMethod(value)
 end))
@@ -255,6 +263,8 @@ end))
 window:addToggle("FlickBOT", false, safeUi("FlickBOT", function(value)
     features.rage:SetFlickBot(value)
 end))
+]]
+
 window:addSection("Silent Aim")
 window:addToggle("Silent Aim", false, safeUi("Silent Aim", function(value)
     features.rage:SetSilentAim(value)
@@ -303,10 +313,10 @@ end))
 window:addToggle("No Spread", false, safeUi("No Spread", function(value)
     features.rage:SetNoSpread(value)
 end))
-window:addToggle("Auto Clicker (Hold LMB)", false, safeUi("Auto Clicker (Hold LMB)", function(value)
+window:addToggle("Rapid Fire", false, safeUi("Rapid Fire", function(value)
     features.rage:SetAutoClicker(value)
 end))
-window:addSlider("Auto Click Delay (ms)", 10, 500, 50, 1, safeUi("Auto Click Delay (ms)", function(value)
+window:addSlider("Rapid Fire Delay (ms)", 1, 500, 50, 1, safeUi("Rapid Fire Delay (ms)", function(value)
     features.rage:SetAutoClickDelay(value)
 end))
 window:addToggle("Instant Reload", false, safeUi("Instant Reload", function(value)
@@ -315,13 +325,13 @@ end))
 window:addToggle("Insta Equip", false, safeUi("Insta Equip", function(value)
     features.rage:SetInstaEquip(value)
 end))
-window:addToggle("RCS", false, safeUi("RCS", function(value)
+window:addToggle("Auto Recoil Control", false, safeUi("RCS", function(value)
     features.rage:SetRcs(value)
 end))
-window:addSlider("RCS Strength", 0, 100, 50, 1, safeUi("RCS Strength", function(value)
+window:addSlider("ARC Strength", 0, 100, 50, 1, safeUi("RCS Strength", function(value)
     features.rage:SetRcsStrength(value)
 end))
-window:addSlider("RCS Delay", 0, 500, 0, 1, safeUi("RCS Delay", function(value)
+window:addSlider("ARC Delay", 0, 500, 0, 1, safeUi("RCS Delay", function(value)
     features.rage:SetRcsDelay(value)
 end))
 
