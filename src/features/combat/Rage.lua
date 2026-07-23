@@ -101,7 +101,7 @@ function Rage.new(context)
         local ok1, circle1 = pcall(Drawing.new, "Circle")
         if ok1 and circle1 then
             circle1.Visible = false
-            circle1.Color = Color3.fromRGB(255, 140, 190)
+            circle1.Color = Color3.fromRGB(50, 220, 80)
             circle1.Thickness = 1
             circle1.Transparency = 0.6
             circle1.NumSides = 64
