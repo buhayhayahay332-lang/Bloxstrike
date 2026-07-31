@@ -153,6 +153,7 @@ local function safeUi(label, fn)
     return errorHandler:Wrap("UI - " .. label, fn)
 end
 
+-- NEVERLOSE UI INITIALIZATION
 local NeverLose = loadstring(game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/NeverLose/refs/heads/main/source.luau"))()
 
 local Notification = NeverLose:CreateNotification()
@@ -177,6 +178,7 @@ if getgenv then
     end
 end
 
+-- WATERMARK
 local Watermark = window:Watermark()
 Watermark:AddBlock("cube-vertexes", "ASTRO.WTF")
 Watermark:AddBlock("person", game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer.Name or "User")
@@ -204,6 +206,7 @@ task.spawn(function()
     end
 end)
 
+-- TABS
 window:AddTabLabel('MAIN')
 local CombatTab = window:AddTab({ Icon = 'crosshair', Name = "Combat" })
 local VisualsTab = window:AddTab({ Icon = 'eye', Name = "Visuals" })
@@ -214,13 +217,15 @@ local SkinsTab = window:AddTab({ Icon = 'sparkles', Name = "Skins" })
 window:AddTabLabel('MISC')
 local MiscTab = window:AddTab({ Icon = 'backpack', Name = "Misc" })
 
+-- ==================== COMBAT TAB ====================
 local AimSection = CombatTab:AddSection({ Name = "AIMBOT", Position = 'left' })
-local aimToggle = AimSection:AddLabel("Aimbot"):AddToggle({
+local aimLabel = AimSection:AddLabel("Aimbot")
+aimLabel:AddToggle({
     Default = false,
     Callback = safeUi("Aimbot Enabled", function(v) features.aimbot:SetEnabled(v) end),
     Flag = "aimbot_enabled"
 })
-local aimOptions = aimToggle:AddOption()
+local aimOptions = aimLabel:AddOption()
 aimOptions:AddLabel("Team Check"):AddToggle({ Default = false, Callback = safeUi("Aimbot Team Check", function(v) features.aimbot:SetTeamCheck(v) end) })
 aimOptions:AddLabel("Wall Check"):AddToggle({ Default = false, Callback = safeUi("Aimbot Wall Check", function(v) features.aimbot:SetWallCheck(v) end) })
 aimOptions:AddLabel("Show FOV"):AddToggle({ Default = false, Callback = safeUi("Aimbot Show FOV", function(v) features.aimbot:SetShowFov(v) end) })
@@ -233,15 +238,17 @@ TrigSection:AddLabel("TriggerBot"):AddToggle({ Default = false, Callback = safeU
 TrigSection:AddLabel("Delay MS"):AddSlider({ Min = 0, Max = 500, Default = 0, Step = 10, Callback = safeUi("TriggerBot Delay MS", function(v) features.triggerBot:SetDelayMs(v) end) })
 
 local HitboxSection = CombatTab:AddSection({ Name = "HITBOX", Position = 'left' })
-local hbToggle = HitboxSection:AddLabel("Expand Hitboxes"):AddToggle({ Default = false, Callback = safeUi("Hitbox Enabled", function(v) features.hitbox:SetEnabled(v) end) })
-local hbOpt = hbToggle:AddOption()
+local hbLabel = HitboxSection:AddLabel("Expand Hitboxes")
+hbLabel:AddToggle({ Default = false, Callback = safeUi("Hitbox Enabled", function(v) features.hitbox:SetEnabled(v) end) })
+local hbOpt = hbLabel:AddOption()
 hbOpt:AddLabel("Team Check"):AddToggle({ Default = false, Callback = safeUi("Hitbox Team Check", function(v) features.hitbox:SetTeamCheck(v) end) })
 HitboxSection:AddLabel("Hitbox Size"):AddSlider({ Min = 1, Max = 3, Default = 3, Step = 0.1, Callback = safeUi("Hitbox Size", function(v) features.hitbox:SetSize(v) end) })
 HitboxSection:AddLabel("Transparency"):AddSlider({ Min = 0, Max = 1, Default = 0.5, Step = 0.05, Callback = safeUi("Hitbox Transparency", function(v) features.hitbox:SetTransparency(v) end) })
 
 local SilentSection = CombatTab:AddSection({ Name = "SILENT AIM", Position = 'right' })
-local saToggle = SilentSection:AddLabel("Silent Aim"):AddToggle({ Default = false, Callback = safeUi("Silent Aim", function(v) features.rage:SetSilentAim(v) end) })
-local saOpt = saToggle:AddOption()
+local saLabel = SilentSection:AddLabel("Silent Aim")
+saLabel:AddToggle({ Default = false, Callback = safeUi("Silent Aim", function(v) features.rage:SetSilentAim(v) end) })
+local saOpt = saLabel:AddOption()
 saOpt:AddLabel("Wallbang"):AddToggle({ Default = false, Callback = safeUi("Ignore Walls", function(v) features.rage:SetWallbang(v) end) })
 saOpt:AddLabel("Dynamic Miss"):AddToggle({ Default = false, Callback = safeUi("Dynamic Miss", function(v) features.rage:SetDynamicMiss(v) end) })
 saOpt:AddLabel("360 FOV"):AddToggle({ Default = false, Callback = safeUi("360 FOV", function(v) features.rage:SetFullFov360(v) end) })
@@ -250,25 +257,27 @@ saOpt:AddLabel("Team Check"):AddToggle({ Default = true, Callback = safeUi("Team
 saOpt:AddLabel("Random Part"):AddToggle({ Default = false, Callback = safeUi("Random Part", function(v) features.rage:SetRandomPart(v) end) })
 
 SilentSection:AddLabel("Hit Chance %"):AddSlider({ Min = 1, Max = 100, Default = 100, Step = 1, Callback = safeUi("Hit Chance %", function(v) features.rage:SetBaseHitChance(v) end) })
-local fovToggle = SilentSection:AddLabel("Show FOV Circle"):AddToggle({ Default = false, Callback = safeUi("Show Circle", function(v) features.rage:SetShowFovCircle(v) end) })
+SilentSection:AddLabel("Show FOV Circle"):AddToggle({ Default = false, Callback = safeUi("Show Circle", function(v) features.rage:SetShowFovCircle(v) end) })
 SilentSection:AddLabel("FOV Size"):AddSlider({ Min = 50, Max = 1000, Default = 150, Step = 1, Callback = safeUi("Fov Size", function(v) features.rage:SetFovSize(v) end) })
 SilentSection:AddLabel("Target Part"):AddDropdown({ Values = features.rage:GetTargetParts(), Default = features.rage:GetTargetPart(), Callback = safeUi("TargetPart", function(v) features.rage:SetTargetPart(v) end) })
 
 local WeaponModsSection = CombatTab:AddSection({ Name = "WEAPON MODS", Position = 'right' })
 WeaponModsSection:AddLabel("No Recoil"):AddToggle({ Default = false, Callback = safeUi("Memory No Recoil", function(v) features.rage:SetMemoryNoRecoil(v) end) })
 WeaponModsSection:AddLabel("No Spread"):AddToggle({ Default = false, Callback = safeUi("No Spread", function(v) features.rage:SetNoSpread(v) end) })
-local rfToggle = WeaponModsSection:AddLabel("Rapid Fire"):AddToggle({ Default = false, Callback = safeUi("Rapid Fire", function(v) features.rage:SetAutoClicker(v) end) })
+WeaponModsSection:AddLabel("Rapid Fire"):AddToggle({ Default = false, Callback = safeUi("Rapid Fire", function(v) features.rage:SetAutoClicker(v) end) })
 WeaponModsSection:AddLabel("Rapid Fire Delay (ms)"):AddSlider({ Min = 1, Max = 500, Default = 50, Step = 1, Callback = safeUi("Rapid Fire Delay", function(v) features.rage:SetAutoClickDelay(v) end) })
 WeaponModsSection:AddLabel("Instant Reload"):AddToggle({ Default = false, Callback = safeUi("Instant Reload", function(v) features.rage:SetInstantReload(v) end) })
 WeaponModsSection:AddLabel("Insta Equip"):AddToggle({ Default = false, Callback = safeUi("Insta Equip", function(v) features.rage:SetInstaEquip(v) end) })
-local rcsToggle = WeaponModsSection:AddLabel("Auto Recoil Control (RCS)"):AddToggle({ Default = false, Callback = safeUi("RCS", function(v) features.rage:SetRcs(v) end) })
+WeaponModsSection:AddLabel("Auto Recoil Control (RCS)"):AddToggle({ Default = false, Callback = safeUi("RCS", function(v) features.rage:SetRcs(v) end) })
 WeaponModsSection:AddLabel("RCS Strength"):AddSlider({ Min = 0, Max = 100, Default = 50, Step = 1, Callback = safeUi("RCS Strength", function(v) features.rage:SetRcsStrength(v) end) })
 WeaponModsSection:AddLabel("RCS Delay"):AddSlider({ Min = 0, Max = 500, Default = 0, Step = 1, Callback = safeUi("RCS Delay", function(v) features.rage:SetRcsDelay(v) end) })
 
 
+-- ==================== VISUALS TAB ====================
 local EspSection = VisualsTab:AddSection({ Name = "PLAYER ESP", Position = 'left' })
-local espMain = EspSection:AddLabel("ESP Enabled"):AddToggle({ Default = false, Callback = safeUi("ESP Enabled", function(v) features.esp:SetSetting("enabled", v) end) })
-local espOpt = espMain:AddOption()
+local espLabel = EspSection:AddLabel("ESP Enabled")
+espLabel:AddToggle({ Default = false, Callback = safeUi("ESP Enabled", function(v) features.esp:SetSetting("enabled", v) end) })
+local espOpt = espLabel:AddOption()
 espOpt:AddLabel("Team Check"):AddToggle({ Default = false, Callback = safeUi("ESP Team Check", function(v) features.esp:SetSetting("teamCheck", v) end) })
 espOpt:AddLabel("Box"):AddToggle({ Default = false, Callback = safeUi("ESP Show Box", function(v) features.esp:SetSetting("showBox", v) end) })
 espOpt:AddLabel("Health Bar"):AddToggle({ Default = false, Callback = safeUi("ESP Show Health", function(v) features.esp:SetSetting("showHealth", v) end) })
@@ -289,23 +298,26 @@ local ChamsSection = VisualsTab:AddSection({ Name = "CHAMS", Position = 'left' }
 ChamsSection:AddLabel("Rainbow Chams"):AddToggle({ Default = false, Callback = safeUi("Chams Rainbow", function(v) features.chams:SetSetting("rainbow", v) end) })
 ChamsSection:AddLabel("Rainbow Speed"):AddSlider({ Min = 0.1, Max = 10, Default = 2, Step = 0.1, Callback = safeUi("Chams Rainbow Speed", function(v) features.chams:SetSetting("rainbowSpeed", v) end) })
 
-local pchams = ChamsSection:AddLabel("Player Chams"):AddToggle({ Default = false, Callback = safeUi("Player Chams Enabled", function(v) features.chams:SetSetting("playerEnabled", v) end) })
-local pcOpt = pchams:AddOption()
+local pchamsLabel = ChamsSection:AddLabel("Player Chams")
+pchamsLabel:AddToggle({ Default = false, Callback = safeUi("Player Chams Enabled", function(v) features.chams:SetSetting("playerEnabled", v) end) })
+local pcOpt = pchamsLabel:AddOption()
 pcOpt:AddLabel("Team Check"):AddToggle({ Default = false, Callback = safeUi("Player Chams Team Check", function(v) features.chams:SetSetting("playerTeamCheck", v) end) })
 pcOpt:AddLabel("Visible Only"):AddToggle({ Default = false, Callback = safeUi("Player Chams Visible Only", function(v) features.chams:SetSetting("playerVisibleOnly", v) end) })
 pcOpt:AddLabel("Color"):AddColorPicker({ Default = Color3.fromRGB(255, 0, 0), Callback = safeUi("Player Chams Color", function(v) features.chams:SetSetting("playerColor", v) end) })
 ChamsSection:AddLabel("Player Fill"):AddSlider({ Min = 0, Max = 1, Default = 0.7, Step = 0.05, Callback = safeUi("Player Chams Fill", function(v) features.chams:SetSetting("playerFillTransparency", v) end) })
 ChamsSection:AddLabel("Player Outline"):AddSlider({ Min = 0, Max = 1, Default = 0, Step = 0.05, Callback = safeUi("Player Chams Outline", function(v) features.chams:SetSetting("playerOutlineTransparency", v) end) })
 
-local wchams = ChamsSection:AddLabel("Weapon Chams"):AddToggle({ Default = false, Callback = safeUi("Weapon Chams Enabled", function(v) features.chams:SetSetting("weaponEnabled", v) end) })
-local wcOpt = wchams:AddOption()
+local wchamsLabel = ChamsSection:AddLabel("Weapon Chams")
+wchamsLabel:AddToggle({ Default = false, Callback = safeUi("Weapon Chams Enabled", function(v) features.chams:SetSetting("weaponEnabled", v) end) })
+local wcOpt = wchamsLabel:AddOption()
 wcOpt:AddLabel("Color"):AddColorPicker({ Default = Color3.fromRGB(0, 255, 255), Callback = safeUi("Weapon Chams Color", function(v) features.chams:SetSetting("weaponColor", v) end) })
 ChamsSection:AddLabel("Weapon Fill"):AddSlider({ Min = 0, Max = 1, Default = 0.5, Step = 0.05, Callback = safeUi("Weapon Chams Fill", function(v) features.chams:SetSetting("weaponFillTransparency", v) end) })
 ChamsSection:AddLabel("Weapon Outline"):AddSlider({ Min = 0, Max = 1, Default = 0, Step = 0.05, Callback = safeUi("Weapon Chams Outline", function(v) features.chams:SetSetting("weaponOutlineTransparency", v) end) })
 
 local WorldSection = VisualsTab:AddSection({ Name = "WORLD & EFFECTS", Position = 'right' })
-local keToggle = WorldSection:AddLabel("Kill Effects"):AddToggle({ Default = false, Callback = safeUi("Kill Effects Enabled", function(v) features.killEffects:SetSetting("enabled", v) end) })
-local keOpt = keToggle:AddOption()
+local keLabel = WorldSection:AddLabel("Kill Effects")
+keLabel:AddToggle({ Default = false, Callback = safeUi("Kill Effects Enabled", function(v) features.killEffects:SetSetting("enabled", v) end) })
+local keOpt = keLabel:AddOption()
 keOpt:AddLabel("Color"):AddColorPicker({ Default = Color3.fromRGB(255, 0, 100), Callback = safeUi("Kill Effect Color", function(v) features.killEffects:SetSetting("color", v) end) })
 WorldSection:AddLabel("Kill Duration"):AddSlider({ Min = 0.3, Max = 2, Default = 0.8, Step = 0.1, Callback = safeUi("Kill Effect Duration", function(v) features.killEffects:SetSetting("duration", v) end) })
 WorldSection:AddLabel("Kill Intensity"):AddSlider({ Min = 0.2, Max = 1, Default = 0.6, Step = 0.1, Callback = safeUi("Kill Effect Intensity", function(v) features.killEffects:SetSetting("intensity", v) end) })
@@ -314,6 +326,7 @@ WorldSection:AddLabel("Anti Flash"):AddToggle({ Default = false, Callback = safe
 WorldSection:AddLabel("Anti Smoke"):AddToggle({ Default = false, Callback = safeUi("Anti Smoke", function(v) features.worldEffects:SetSetting("antiSmoke", v) end) })
 
 
+-- ==================== SKINS TAB ====================
 local SkinSection = SkinsTab:AddSection({ Name = "SKINCHANGER", Position = 'left' })
 SkinSection:AddLabel("Weapon Skins"):AddToggle({ Default = false, Callback = safeUi("Weapon Skin Changer Enabled", function(v) features.skinchanger:SetSkinChangerEnabled(v) end) })
 SkinSection:AddLabel("Knife Changer"):AddToggle({ Default = false, Callback = safeUi("Knife Changer Enabled", function(v) features.skinchanger:SetKnifeChangerEnabled(v) end) })
@@ -397,9 +410,11 @@ for _, weaponName in ipairs(features.skinchanger:GetWeaponNames()) do
 end
 
 
+-- ==================== MISC TAB ====================
 local MiscSection = MiscTab:AddSection({ Name = "MOVEMENT", Position = 'left' })
 MiscSection:AddLabel("Bunny Hop"):AddToggle({ Default = false, Callback = safeUi("Bunny Hop Enabled", function(v) features.bunnyHop:SetEnabled(v) end) })
 
+-- USER SETTINGS / SYSTEM
 window.UserSettings:AddLabel("Menu Keybind"):AddKeybind({ Default = 'RightShift', Callback = function(v) window.Keybind = v end })
 window.UserSettings:AddLabel("Menu Scale"):AddDropdown({ Values = {"Default", "Large", "Mobile", "Small"}, Default = "Default", Callback = function(v) window:SetSize(NeverLose.Scales[v]) end })
 window.UserSettings:AddLabel("3D Menu"):AddToggle({ Default = false, Callback = function(v) pcall(function() window:Set3DRender(v) end) end })

@@ -306,7 +306,6 @@ runExecutorWhitelist(httpGet)
 local loadingOverlay = createLoadingOverlay("Fetching script files...")
 local files = {
     "main.lua",
-    "ui_lib.lua",
     "src/shared/Cleaner.lua",
     "src/shared/ErrorHandler.lua",
     "src/shared/Services.lua",
