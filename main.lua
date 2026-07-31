@@ -1,3 +1,4 @@
+warn("lmao1")
 local bootstrap = ...
 if type(bootstrap) ~= "table" then
     bootstrap = {}

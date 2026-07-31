@@ -1,8 +1,8 @@
-local ThreatVisuals = {}
-ThreatVisuals.__index = ThreatVisuals
+local HazardTracker = {}
+HazardTracker.__index = HazardTracker
 
-function ThreatVisuals.new(context)
-    local self = setmetatable({}, ThreatVisuals)
+function HazardTracker.new(context)
+    local self = setmetatable({}, HazardTracker)
 
     self.services = context.services
     self.globals = context.globals
@@ -15,36 +15,36 @@ function ThreatVisuals.new(context)
         indicatorReach = 15,
     }
     
-    self.bombData = {}
-    self.gazeLines = {}
+    self.hazardData = {}
+    self.focusLines = {}
 
     self.gui = Instance.new("ScreenGui")
-    self.gui.Name = "AstroThreats"
+    self.gui.Name = "AstroHazards"
     self.gui.IgnoreGuiInset = true
     self.gui.DisplayOrder = 1000
     self.gui.Parent = (gethui and gethui()) or self.services.CoreGui
 
-    self.cleaner:Give(self.errorHandler:Connect(self.services.RunService.RenderStepped, "ThreatVisuals Render", function()
-        self:_updateGaze()
-        self:_updateExplosives()
+    self.cleaner:Give(self.errorHandler:Connect(self.services.RunService.RenderStepped, "HazardTracker Render", function()
+        self:_updateFocus()
+        self:_updateHazards()
     end))
     
     self.cleaner:Give(function()
-        for _, data in pairs(self.bombData) do
+        for _, data in pairs(self.hazardData) do
             if data.label then data.label:Destroy() end
             for _, line in ipairs(data.lines) do line:Remove() end
         end
-        for _, line in pairs(self.gazeLines) do line:Remove() end
+        for _, line in pairs(self.focusLines) do line:Remove() end
         self.gui:Destroy()
     end)
 
     return self
 end
 
-function ThreatVisuals:_updateGaze()
+function HazardTracker:_updateFocus()
     local camera = self.globals:GetCamera()
     if not camera or not self.settings.gazeIndicators then
-        for _, line in pairs(self.gazeLines) do line.Visible = false end
+        for _, line in pairs(self.focusLines) do line.Visible = false end
         return
     end
 
@@ -54,12 +54,12 @@ function ThreatVisuals:_updateGaze()
         activeModels[model] = true
         local head = model:FindFirstChild("Head")
         if head then
-            local line = self.gazeLines[model]
+            local line = self.focusLines[model]
             if not line then
                 line = Drawing.new("Line")
                 line.Thickness = 1.5
                 line.Transparency = 0.8
-                self.gazeLines[model] = line
+                self.focusLines[model] = line
             end
 
             local startPos, startVisible = camera:WorldToViewportPoint(head.Position)
@@ -76,14 +76,14 @@ function ThreatVisuals:_updateGaze()
         end
     end
     
-    for model, line in pairs(self.gazeLines) do
+    for model, line in pairs(self.focusLines) do
         if not activeModels[model] then
             line.Visible = false
         end
     end
 end
 
-function ThreatVisuals:_updateExplosives()
+function HazardTracker:_updateHazards()
     local camera = self.globals:GetCamera()
     local debris = self.services.Workspace:FindFirstChild("Debris")
     if not camera or not debris then return end
@@ -91,16 +91,17 @@ function ThreatVisuals:_updateExplosives()
     local currentDebris = {}
 
     for _, obj in ipairs(debris:GetChildren()) do
-        local isBomb = false
-        if string.find(string.lower(obj.Name), "c4") or string.find(string.lower(obj.Name), "bomb") then
-            isBomb = true
+        local isHazard = false
+        local lowerName = string.lower(obj.Name)
+        if string.find(lowerName, "c4") or string.find(lowerName, "bomb") then
+            isHazard = true
         elseif obj:FindFirstChild("Weapon") and obj.Weapon:FindFirstChild("Circle") then
-            isBomb = true
+            isHazard = true
         end
 
-        if isBomb then
+        if isHazard then
             currentDebris[obj] = true
-            local data = self.bombData[obj]
+            local data = self.hazardData[obj]
             if not data then
                 data = { lines = {}, points = {}, label = nil }
                 if Drawing then
@@ -111,10 +112,14 @@ function ThreatVisuals:_updateExplosives()
                         table.insert(data.lines, line)
                     end
                 end
-                self.bombData[obj] = data
+                self.hazardData[obj] = data
             end
 
-            local mainPart = obj:IsA("BasePart") and obj or obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+            -- BUG FIX: Check if obj is a Model before accessing PrimaryPart
+            local mainPart = obj:IsA("BasePart") and obj 
+                or (obj:IsA("Model") and obj.PrimaryPart) 
+                or obj:FindFirstChildWhichIsA("BasePart", true)
+
             if mainPart then
                 local screenPos, onScreen = camera:WorldToViewportPoint(mainPart.Position)
                 
@@ -129,7 +134,7 @@ function ThreatVisuals:_updateExplosives()
                         data.label = label
                     end
                     local dist = (camera.CFrame.Position - mainPart.Position).Magnitude
-                    data.label.Text = string.format("DEVICE [%dm]", math.floor(dist/3))
+                    data.label.Text = string.format("THREAT [%dm]", math.floor(dist/3))
                     data.label.Position = UDim2.fromOffset(screenPos.X, screenPos.Y - 20)
                     data.label.Visible = true
                 elseif data.label then
@@ -164,7 +169,7 @@ function ThreatVisuals:_updateExplosives()
         end
     end
     
-    for obj, data in pairs(self.bombData) do
+    for obj, data in pairs(self.hazardData) do
         if not currentDebris[obj] then
             if data.label then data.label.Visible = false end
             for _, line in ipairs(data.lines) do line.Visible = false end
@@ -172,15 +177,16 @@ function ThreatVisuals:_updateExplosives()
     end
 end
 
-function ThreatVisuals:SetSetting(key, value)
+function HazardTracker:SetSetting(key, value)
     if self.settings[key] ~= nil then
         self.settings[key] = value
     end
 end
 
-function ThreatVisuals:Destroy()
+function HazardTracker:Destroy()
     self.cleaner:Cleanup()
 end
 
-return ThreatVisuals
+return HazardTracker
+
 
