@@ -114,7 +114,7 @@ local KillEffects = loadLocal("src/features/visuals/KillEffects.lua")
 local WorldVisuals = loadLocal("src/features/visuals/WorldVisuals.lua")
 local HazardTracker = loadLocal("src/features/visuals/ThreatVisuals.lua")
 local Skinchanger = loadLocal("src/features/skins/Skinchanger.lua")
-local BulletTracers = loadLocal("src/features/visuals/BulletTracers.lua")
+--local BulletTracers = loadLocal("src/features/visuals/BulletTracers.lua")
 
 local globals = GlobalsFactory(Services)
 local errorHandler = ErrorHandler.new(Services)
@@ -143,7 +143,7 @@ local features = {
     worldVisuals = WorldVisuals.new(context),
     hazardTracker = HazardTracker.new(context),
     skinchanger = Skinchanger.new(context),
-    bulletTracers = BulletTracers.new(context),
+    --bulletTracers = BulletTracers.new(context),
 }
 
 for _, feature in pairs(features) do
@@ -315,15 +315,16 @@ WorldSection:AddLabel("Minimal Visuals"):AddToggle({ Default = false, Callback =
 WorldSection:AddLabel("Anti Flash"):AddToggle({ Default = false, Callback = safeUi("Anti Flash", function(v) features.worldVisuals:SetSetting("antiFlash", v) end) })
 WorldSection:AddLabel("Anti Smoke"):AddToggle({ Default = false, Callback = safeUi("Anti Smoke", function(v) features.worldVisuals:SetSetting("antiSmoke", v) end) })
 
-WorldSection:AddLabel("External View"):AddToggle({ Default = false, Callback = safeUi("External View", function(v) features.worldVisuals:SetSetting("externalView", v) end) })
+WorldSection:AddLabel("ThirdPerson"):AddToggle({ Default = false, Callback = safeUi("ThirdPerson", function(v) features.worldVisuals:SetSetting("externalView", v) end) })
 WorldSection:AddLabel("View Depth"):AddSlider({ Min = 5, Max = 25, Default = 8, Step = 1, Callback = safeUi("View Depth", function(v) features.worldVisuals:SetSetting("cameraDepth", v) end) })
 
-local ThreatSection = VisualsTab:AddSection({ Name = "HAZARDS", Position = 'right' })
-ThreatSection:AddLabel("Hazard Scan"):AddToggle({ Default = false, Callback = safeUi("Hazard Scan", function(v) features.hazardTracker:SetSetting("deviceScanner", v) end) })
+local ThreatSection = VisualsTab:AddSection({ Name = "Throwables", Position = 'right' })
+ThreatSection:AddLabel("Grenades"):AddToggle({ Default = false, Callback = safeUi("Hazard Scan", function(v) features.hazardTracker:SetSetting("deviceScanner", v) end) })
 ThreatSection:AddLabel("Impact Trail"):AddToggle({ Default = false, Callback = safeUi("Impact Trail", function(v) features.hazardTracker:SetSetting("explosivePath", v) end) })
-ThreatSection:AddLabel("Focus Lines"):AddToggle({ Default = false, Callback = safeUi("Focus Lines", function(v) features.hazardTracker:SetSetting("gazeIndicators", v) end) })
-ThreatSection:AddLabel("Focus Reach"):AddSlider({ Min = 5, Max = 50, Default = 15, Step = 1, Callback = safeUi("Focus Reach", function(v) features.hazardTracker:SetSetting("indicatorReach", v) end) })
+ThreatSection:AddLabel("Line of Sight"):AddToggle({ Default = false, Callback = safeUi("Focus Lines", function(v) features.hazardTracker:SetSetting("gazeIndicators", v) end) })
+ThreatSection:AddLabel("Sight Reach"):AddSlider({ Min = 5, Max = 50, Default = 15, Step = 1, Callback = safeUi("Focus Reach", function(v) features.hazardTracker:SetSetting("indicatorReach", v) end) })
 
+--[[
 local TracersSection = VisualsTab:AddSection({ Name = "BULLET TRACERS", Position = 'right' })
 local btLabel = TracersSection:AddLabel("Tracers Enabled")
 btLabel:AddToggle({
@@ -344,6 +345,7 @@ TracersSection:AddLabel("Pattern"):AddDropdown({
 TracersSection:AddLabel("Duration"):AddSlider({ Min = 0.1, Max = 3, Default = 0.6, Step = 0.1, Callback = safeUi("Bullet Tracers Duration", function(v) features.bulletTracers:SetSetting("duration", v) end) })
 TracersSection:AddLabel("Thickness"):AddSlider({ Min = 0.05, Max = 1, Default = 0.2, Step = 0.05, Callback = safeUi("Bullet Tracers Thickness", function(v) features.bulletTracers:SetSetting("thickness", v) end) })
 TracersSection:AddLabel("Transparency"):AddSlider({ Min = 0, Max = 1, Default = 0.3, Step = 0.05, Callback = safeUi("Bullet Tracers Transparency", function(v) features.bulletTracers:SetSetting("transparency", v) end) })
+]]
 
 
 local SkinSection = SkinsTab:AddSection({ Name = "SKINCHANGER", Position = 'left' })
@@ -441,11 +443,11 @@ for _, weaponName in ipairs(features.skinchanger:GetWeaponNames()) do
 end
 
 
-local MiscSection = MiscTab:AddSection({ Name = "PHYSICS", Position = 'left' })
-MiscSection:AddLabel("Enable Physics"):AddToggle({ Default = false, Callback = safeUi("Enable Physics", function(v) features.movement:SetEnabled(v) end) })
+local MiscSection = MiscTab:AddSection({ Name = "Movement", Position = 'left' })
+MiscSection:AddLabel("Enable Physics"):AddToggle({ Default = false, Callback = safeUi("Movement", function(v) features.movement:SetEnabled(v) end) })
 MiscSection:AddLabel("Bunny Hop"):AddToggle({ Default = false, Callback = safeUi("Bunny Hop", function(v) features.movement:SetSetting("bunnyHop", v) end) })
 MiscSection:AddLabel("Aerial Glide"):AddToggle({ Default = false, Callback = safeUi("Aerial Glide", function(v) features.movement:SetSetting("aerialGlide", v) end) })
-MiscSection:AddLabel("Motion Scale"):AddSlider({ Min = 16, Max = 100, Default = 16, Step = 1, Callback = safeUi("Motion Scale", function(v) features.movement:SetSetting("motionScale", v) end) })
+MiscSection:AddLabel("Speed"):AddSlider({ Min = 16, Max = 100, Default = 16, Step = 1, Callback = safeUi("Speed", function(v) features.movement:SetSetting("motionScale", v) end) })
 MiscSection:AddLabel("Leap Force"):AddSlider({ Min = 25, Max = 100, Default = 25, Step = 1, Callback = safeUi("Leap Force", function(v) features.movement:SetSetting("leapForce", v) end) })
 MiscSection:AddLabel("Glide Velocity"):AddSlider({ Min = 16, Max = 50, Default = 16, Step = 1, Callback = safeUi("Glide Velocity", function(v) features.movement:SetSetting("glideVelocity", v) end) })
 
