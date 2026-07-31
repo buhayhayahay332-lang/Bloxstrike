@@ -101,7 +101,6 @@ local Cleaner = loadLocal("src/shared/Cleaner.lua")
 local Services = loadLocal("src/shared/Services.lua")
 local ErrorHandler = loadLocal("src/shared/ErrorHandler.lua")
 local GlobalsFactory = loadLocal("src/shared/Globals.lua")
-local UILib = loadLocal("ui_lib.lua")
 
 local Aimbot = loadLocal("src/features/combat/Aimbot.lua")
 local TriggerBot = loadLocal("src/features/combat/TriggerBot.lua")
@@ -110,8 +109,6 @@ local Rage = loadLocal("src/features/combat/Rage.lua")
 local BunnyHop = loadLocal("src/features/movement/BunnyHop.lua")
 local ESP = loadLocal("src/features/visuals/ESP.lua")
 local Chams = loadLocal("src/features/visuals/Chams.lua")
---local BulletTracers = loadLocal("src/features/visuals/BulletTracers.lua")
---local ParticleEffects = loadLocal("src/features/visuals/ParticleEffects.lua")
 local KillEffects = loadLocal("src/features/visuals/KillEffects.lua")
 local WorldEffects = loadLocal("src/features/visuals/WorldEffects.lua")
 local Skinchanger = loadLocal("src/features/skins/Skinchanger.lua")
@@ -139,8 +136,6 @@ local features = {
     bunnyHop = BunnyHop.new(context),
     esp = ESP.new(context),
     chams = Chams.new(context),
-   -- bulletTracers = BulletTracers.new(context),
-    --particleEffects = ParticleEffects.new(context),
     killEffects = KillEffects.new(context),
     worldEffects = WorldEffects.new(context),
     skinchanger = Skinchanger.new(context),
@@ -154,208 +149,184 @@ for _, feature in pairs(features) do
     end)
 end
 
-local window = UILib.new("Bloxtrike", Enum.KeyCode.RightShift)
-window:setConfigFolder("Bloxtrike")
-window:onClose(errorHandler:Wrap("Window Close", function()
-    appCleaner:Cleanup()
-end))
-
-if getgenv then
-    getgenv().BloxtrikeCleanup = function()
-        appCleaner:Cleanup()
-        if window and window.screenGui and window.screenGui.Parent then
-            window.screenGui:Destroy()
-        end
-    end
-end
-
-local combatTab = window:addTab("Combat")
-local skinsTab = window:addTab("Skins")
-local visualsTab = window:addTab("Visuals")
-local configTab = window:addTab("Config")
-
-window:switchTab(combatTab)
-window:addSection("Aimbot")
 local function safeUi(label, fn)
     return errorHandler:Wrap("UI - " .. label, fn)
 end
 
-window:addToggle("Aimbot Enabled", false, safeUi("Aimbot Enabled", function(value)
-    features.aimbot:SetEnabled(value)
-end))
-window:addToggle("Aimbot Team Check", false, safeUi("Aimbot Team Check", function(value)
-    features.aimbot:SetTeamCheck(value)
-end))
-window:addToggle("Aimbot Wall Check", false, safeUi("Aimbot Wall Check", function(value)
-    features.aimbot:SetWallCheck(value)
-end))
-window:addToggle("Aimbot Show FOV", false, safeUi("Aimbot Show FOV", function(value)
-    features.aimbot:SetShowFov(value)
-end))
-window:addSlider("Aimbot FOV Radius", 10, 500, 100, 10, safeUi("Aimbot FOV Radius", function(value)
-    features.aimbot:SetFovRadius(value)
-end))
-window:addSlider("Aimbot Smoothing", 1, 10, 3, 1, safeUi("Aimbot Smoothing", function(value)
-    features.aimbot:SetSmoothing(value)
-end))
+local NeverLose = loadstring(game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/NeverLose/refs/heads/main/source.luau"))()
 
-window:addSection("TriggerBot")
-window:addToggle("TriggerBot Enabled", false, safeUi("TriggerBot Enabled", function(value)
-    features.triggerBot:SetEnabled(value)
-end))
-window:addSlider("TriggerBot Delay MS", 0, 500, 0, 10, safeUi("TriggerBot Delay MS", function(value)
-    features.triggerBot:SetDelayMs(value)
-end))
+local Notification = NeverLose:CreateNotification()
+local Logging = NeverLose:CreateLogger()
+local Indicator = NeverLose:CreateIndicator()
 
-window:addSection("Hitbox")
-window:addToggle("Hitbox Enabled", false, safeUi("Hitbox Enabled", function(value)
-    features.hitbox:SetEnabled(value)
-end))
-window:addToggle("Hitbox Team Check", false, safeUi("Hitbox Team Check", function(value)
-    features.hitbox:SetTeamCheck(value)
-end))
-window:addSlider("Hitbox Size", 1, 3, 3, 0.1, safeUi("Hitbox Size", function(value)
-    features.hitbox:SetSize(value)
-end))
-window:addSlider("Hitbox Transparency", 0, 1, 0.5, 0.05, safeUi("Hitbox Transparency", function(value)
-    features.hitbox:SetTransparency(value)
-end))
+local window = NeverLose:CreateWindow({
+    Logo = "rbxassetid://13129527031",
+    Name = "Bloxtrike",
+    Content = "Bloxtrike | discord.gg/NtBMqWXySm",
+    Size = NeverLose.Scales.Default,
+    ConfigFolder = "Bloxtrike",
+    Enable3DRenderer = true,
+    Keybind = "RightShift"
+})
 
---[[
-window:addSection("Rage")
-window:addToggle("Rage Mode", false, safeUi("Rage Mode", function(value)
-    features.rage:SetRageMode(value)
-end))
-]]
+if getgenv then
+    getgenv().BloxtrikeCleanup = function()
+        appCleaner:Cleanup()
+        NeverLose.UnloadEnabled = true
+        pcall(function() NeverLose:Unload() end)
+    end
+end
 
---[[
-window:addKeybind("Rage Toggle Key", Enum.KeyCode.Unknown, safeUi("Rage Toggle Key", function(value)
-    features.rage:SetRageToggleKey(value)
-end))
-]]
+local Watermark = window:Watermark()
+Watermark:AddBlock("cube-vertexes", "ASTRO.WTF")
+Watermark:AddBlock("person", game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer.Name or "User")
+local discordBlock = Watermark:AddBlock("link", "discord.gg/NtBMqWXySm")
+if discordBlock then
+    pcall(function()
+        discordBlock.MouseButton1Click:Connect(function()
+            if setclipboard then
+                setclipboard("https://discord.gg/NtBMqWXySm")
+                Notification.new({ Title = "ASTRO.WTF", Content = "Discord link copied to clipboard!", Duration = 3 })
+            end
+        end)
+    end)
+end
 
---[[
-window:addSection("Aimlock")
-window:addToggle("Aimlock", false, safeUi("Aimlock", function(value)
-    features.rage:SetAimlock(value)
-end))
-]]
+local pingBlock = Watermark:AddBlock("radio", "Ping: 0ms")
+task.spawn(function()
+    while task.wait(2) do
+        pcall(function()
+            local ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
+            if pingBlock and pingBlock:FindFirstChild("Text") then
+                pingBlock.Text.Text = "Ping: " .. tostring(ping) .. "ms"
+            end
+        end)
+    end
+end)
 
---[[window:addKeybind("Aimlock Toggle Key", Enum.KeyCode.Unknown, safeUi("Aimlock Toggle Key", function(value)
-    features.rage:SetAimlockToggleKey(value)
-end))
-window:addKeybind("Aimlock HoldKey", Enum.UserInputType.MouseButton2, safeUi("Aimlock HoldKey", function(value)
-    features.rage:SetAimlockHoldKey(value)
-end))]]
---[[
-window:addDropdown("Aimlock Method", { "Raw Mouse" }, "Raw Mouse", safeUi("Aimlock Method", function(value)
-    features.rage:SetAimlockMethod(value)
-end))
-window:addSlider("Aimlock Fov Size", 10, 1000, 150, 1, safeUi("Aimlock Fov Size", function(value)
-    features.rage:SetAimlockFov(value)
-end))
-window:addSlider("Aim Smoothness", 1, 10, 2, 1, safeUi("Aim Smoothness", function(value)
-    features.rage:SetAimSmoothness(value)
-end))
-window:addSlider("Aim Jitter (Randomize)", 0, 50, 10, 1, safeUi("Aim Jitter (Randomize)", function(value)
-    features.rage:SetAimJitter(value)
-end))
-window:addToggle("FlickBOT", false, safeUi("FlickBOT", function(value)
-    features.rage:SetFlickBot(value)
-end))
-]]
+window:AddTabLabel('MAIN')
+local CombatTab = window:AddTab({ Icon = 'crosshair', Name = "Combat" })
+local VisualsTab = window:AddTab({ Icon = 'eye', Name = "Visuals" })
 
-window:addSection("Silent Aim")
-window:addToggle("Silent Aim", false, safeUi("Silent Aim", function(value)
-    features.rage:SetSilentAim(value)
-end))
-window:addToggle("Ignore Walls / Wallbang", false, safeUi("Ignore Walls / Wallbang", function(value)
-    features.rage:SetWallbang(value)
-end))
---[[window:addKeybind("Wallbang Toggle Key", Enum.KeyCode.Unknown, safeUi("Wallbang Toggle Key", function(value)
-    features.rage:SetWallbangToggleKey(value)
-end))
-window:addKeybind("Silent Aim Toggle Key", Enum.KeyCode.Unknown, safeUi("Silent Aim Toggle Key", function(value)
-    features.rage:SetSilentAimToggleKey(value)
-end))]]
-window:addToggle("Dynamic Miss (Hit Chance)", false, safeUi("Dynamic Miss (Hit Chance)", function(value)
-    features.rage:SetDynamicMiss(value)
-end))
-window:addSlider("Hit Chance %", 1, 100, 100, 1, safeUi("Hit Chance %", function(value)
-    features.rage:SetBaseHitChance(value)
-end))
-window:addToggle("Show Circle", false, safeUi("Show Circle", function(value)
-    features.rage:SetShowFovCircle(value)
-end))
-window:addSlider("Fov Size", 50, 1000, 150, 1, safeUi("Fov Size", function(value)
-    features.rage:SetFovSize(value)
-end))
-window:addSection("Targeting")
-window:addDropdown("TargetPart", features.rage:GetTargetParts(), features.rage:GetTargetPart(), safeUi("TargetPart", function(value)
-    features.rage:SetTargetPart(value)
-end))
-window:addToggle("Random Part", false, safeUi("Random Part", function(value)
-    features.rage:SetRandomPart(value)
-end))
-window:addToggle("Target All Directions", false, safeUi("360 FOV (All Directions)", function(value)
-    features.rage:SetFullFov360(value)
-end))
-window:addToggle("AimWall Check", true, safeUi("AimWall Check", function(value)
-    features.rage:SetAimWallCheck(value)
-end))
-window:addToggle("TeamCheck", true, safeUi("TeamCheck", function(value)
-    features.rage:SetTeamCheck(value)
-end))
-window:addSection("Weapon Mods")
-window:addToggle("No Recoil", false, safeUi("Memory No Recoil", function(value)
-    features.rage:SetMemoryNoRecoil(value)
-end))
-window:addToggle("No Spread", false, safeUi("No Spread", function(value)
-    features.rage:SetNoSpread(value)
-end))
-window:addToggle("Rapid Fire", false, safeUi("Rapid Fire", function(value)
-    features.rage:SetAutoClicker(value)
-end))
-window:addSlider("Rapid Fire Delay (ms)", 1, 500, 50, 1, safeUi("Rapid Fire Delay (ms)", function(value)
-    features.rage:SetAutoClickDelay(value)
-end))
-window:addToggle("Instant Reload", false, safeUi("Instant Reload", function(value)
-    features.rage:SetInstantReload(value)
-end))
-window:addToggle("Insta Equip", false, safeUi("Insta Equip", function(value)
-    features.rage:SetInstaEquip(value)
-end))
-window:addToggle("Auto Recoil Control", false, safeUi("RCS", function(value)
-    features.rage:SetRcs(value)
-end))
-window:addSlider("ARC Strength", 0, 100, 50, 1, safeUi("RCS Strength", function(value)
-    features.rage:SetRcsStrength(value)
-end))
-window:addSlider("ARC Delay", 0, 500, 0, 1, safeUi("RCS Delay", function(value)
-    features.rage:SetRcsDelay(value)
-end))
+window:AddTabLabel('CUSTOMIZATION')
+local SkinsTab = window:AddTab({ Icon = 'sparkles', Name = "Skins" })
 
-window:addSection("Movement")
-window:addToggle("Bunny Hop Enabled", false, safeUi("Bunny Hop Enabled", function(value)
-    features.bunnyHop:SetEnabled(value)
-end))
+window:AddTabLabel('MISC')
+local MiscTab = window:AddTab({ Icon = 'backpack', Name = "Misc" })
 
-window:switchTab(skinsTab)
-window:addSection("Skin Changer")
-window:addToggle("Weapon Skin Changer Enabled", false, safeUi("Weapon Skin Changer Enabled", function(value)
-    features.skinchanger:SetSkinChangerEnabled(value)
-end))
-window:addToggle("Knife Changer Enabled", false, safeUi("Knife Changer Enabled", function(value)
-    features.skinchanger:SetKnifeChangerEnabled(value)
-end))
+local AimSection = CombatTab:AddSection({ Name = "AIMBOT", Position = 'left' })
+local aimToggle = AimSection:AddLabel("Aimbot"):AddToggle({
+    Default = false,
+    Callback = safeUi("Aimbot Enabled", function(v) features.aimbot:SetEnabled(v) end),
+    Flag = "aimbot_enabled"
+})
+local aimOptions = aimToggle:AddOption()
+aimOptions:AddLabel("Team Check"):AddToggle({ Default = false, Callback = safeUi("Aimbot Team Check", function(v) features.aimbot:SetTeamCheck(v) end) })
+aimOptions:AddLabel("Wall Check"):AddToggle({ Default = false, Callback = safeUi("Aimbot Wall Check", function(v) features.aimbot:SetWallCheck(v) end) })
+aimOptions:AddLabel("Show FOV"):AddToggle({ Default = false, Callback = safeUi("Aimbot Show FOV", function(v) features.aimbot:SetShowFov(v) end) })
+
+AimSection:AddLabel("FOV Radius"):AddSlider({ Min = 10, Max = 500, Default = 100, Step = 10, Callback = safeUi("Aimbot FOV Radius", function(v) features.aimbot:SetFovRadius(v) end) })
+AimSection:AddLabel("Smoothing"):AddSlider({ Min = 1, Max = 10, Default = 3, Step = 1, Callback = safeUi("Aimbot Smoothing", function(v) features.aimbot:SetSmoothing(v) end) })
+
+local TrigSection = CombatTab:AddSection({ Name = "TRIGGERBOT", Position = 'left' })
+TrigSection:AddLabel("TriggerBot"):AddToggle({ Default = false, Callback = safeUi("TriggerBot Enabled", function(v) features.triggerBot:SetEnabled(v) end) })
+TrigSection:AddLabel("Delay MS"):AddSlider({ Min = 0, Max = 500, Default = 0, Step = 10, Callback = safeUi("TriggerBot Delay MS", function(v) features.triggerBot:SetDelayMs(v) end) })
+
+local HitboxSection = CombatTab:AddSection({ Name = "HITBOX", Position = 'left' })
+local hbToggle = HitboxSection:AddLabel("Expand Hitboxes"):AddToggle({ Default = false, Callback = safeUi("Hitbox Enabled", function(v) features.hitbox:SetEnabled(v) end) })
+local hbOpt = hbToggle:AddOption()
+hbOpt:AddLabel("Team Check"):AddToggle({ Default = false, Callback = safeUi("Hitbox Team Check", function(v) features.hitbox:SetTeamCheck(v) end) })
+HitboxSection:AddLabel("Hitbox Size"):AddSlider({ Min = 1, Max = 3, Default = 3, Step = 0.1, Callback = safeUi("Hitbox Size", function(v) features.hitbox:SetSize(v) end) })
+HitboxSection:AddLabel("Transparency"):AddSlider({ Min = 0, Max = 1, Default = 0.5, Step = 0.05, Callback = safeUi("Hitbox Transparency", function(v) features.hitbox:SetTransparency(v) end) })
+
+local SilentSection = CombatTab:AddSection({ Name = "SILENT AIM", Position = 'right' })
+local saToggle = SilentSection:AddLabel("Silent Aim"):AddToggle({ Default = false, Callback = safeUi("Silent Aim", function(v) features.rage:SetSilentAim(v) end) })
+local saOpt = saToggle:AddOption()
+saOpt:AddLabel("Wallbang"):AddToggle({ Default = false, Callback = safeUi("Ignore Walls", function(v) features.rage:SetWallbang(v) end) })
+saOpt:AddLabel("Dynamic Miss"):AddToggle({ Default = false, Callback = safeUi("Dynamic Miss", function(v) features.rage:SetDynamicMiss(v) end) })
+saOpt:AddLabel("360 FOV"):AddToggle({ Default = false, Callback = safeUi("360 FOV", function(v) features.rage:SetFullFov360(v) end) })
+saOpt:AddLabel("AimWall Check"):AddToggle({ Default = true, Callback = safeUi("AimWall Check", function(v) features.rage:SetAimWallCheck(v) end) })
+saOpt:AddLabel("Team Check"):AddToggle({ Default = true, Callback = safeUi("TeamCheck", function(v) features.rage:SetTeamCheck(v) end) })
+saOpt:AddLabel("Random Part"):AddToggle({ Default = false, Callback = safeUi("Random Part", function(v) features.rage:SetRandomPart(v) end) })
+
+SilentSection:AddLabel("Hit Chance %"):AddSlider({ Min = 1, Max = 100, Default = 100, Step = 1, Callback = safeUi("Hit Chance %", function(v) features.rage:SetBaseHitChance(v) end) })
+local fovToggle = SilentSection:AddLabel("Show FOV Circle"):AddToggle({ Default = false, Callback = safeUi("Show Circle", function(v) features.rage:SetShowFovCircle(v) end) })
+SilentSection:AddLabel("FOV Size"):AddSlider({ Min = 50, Max = 1000, Default = 150, Step = 1, Callback = safeUi("Fov Size", function(v) features.rage:SetFovSize(v) end) })
+SilentSection:AddLabel("Target Part"):AddDropdown({ Values = features.rage:GetTargetParts(), Default = features.rage:GetTargetPart(), Callback = safeUi("TargetPart", function(v) features.rage:SetTargetPart(v) end) })
+
+local WeaponModsSection = CombatTab:AddSection({ Name = "WEAPON MODS", Position = 'right' })
+WeaponModsSection:AddLabel("No Recoil"):AddToggle({ Default = false, Callback = safeUi("Memory No Recoil", function(v) features.rage:SetMemoryNoRecoil(v) end) })
+WeaponModsSection:AddLabel("No Spread"):AddToggle({ Default = false, Callback = safeUi("No Spread", function(v) features.rage:SetNoSpread(v) end) })
+local rfToggle = WeaponModsSection:AddLabel("Rapid Fire"):AddToggle({ Default = false, Callback = safeUi("Rapid Fire", function(v) features.rage:SetAutoClicker(v) end) })
+WeaponModsSection:AddLabel("Rapid Fire Delay (ms)"):AddSlider({ Min = 1, Max = 500, Default = 50, Step = 1, Callback = safeUi("Rapid Fire Delay", function(v) features.rage:SetAutoClickDelay(v) end) })
+WeaponModsSection:AddLabel("Instant Reload"):AddToggle({ Default = false, Callback = safeUi("Instant Reload", function(v) features.rage:SetInstantReload(v) end) })
+WeaponModsSection:AddLabel("Insta Equip"):AddToggle({ Default = false, Callback = safeUi("Insta Equip", function(v) features.rage:SetInstaEquip(v) end) })
+local rcsToggle = WeaponModsSection:AddLabel("Auto Recoil Control (RCS)"):AddToggle({ Default = false, Callback = safeUi("RCS", function(v) features.rage:SetRcs(v) end) })
+WeaponModsSection:AddLabel("RCS Strength"):AddSlider({ Min = 0, Max = 100, Default = 50, Step = 1, Callback = safeUi("RCS Strength", function(v) features.rage:SetRcsStrength(v) end) })
+WeaponModsSection:AddLabel("RCS Delay"):AddSlider({ Min = 0, Max = 500, Default = 0, Step = 1, Callback = safeUi("RCS Delay", function(v) features.rage:SetRcsDelay(v) end) })
+
+
+local EspSection = VisualsTab:AddSection({ Name = "PLAYER ESP", Position = 'left' })
+local espMain = EspSection:AddLabel("ESP Enabled"):AddToggle({ Default = false, Callback = safeUi("ESP Enabled", function(v) features.esp:SetSetting("enabled", v) end) })
+local espOpt = espMain:AddOption()
+espOpt:AddLabel("Team Check"):AddToggle({ Default = false, Callback = safeUi("ESP Team Check", function(v) features.esp:SetSetting("teamCheck", v) end) })
+espOpt:AddLabel("Box"):AddToggle({ Default = false, Callback = safeUi("ESP Show Box", function(v) features.esp:SetSetting("showBox", v) end) })
+espOpt:AddLabel("Health Bar"):AddToggle({ Default = false, Callback = safeUi("ESP Show Health", function(v) features.esp:SetSetting("showHealth", v) end) })
+espOpt:AddLabel("Names"):AddToggle({ Default = false, Callback = safeUi("ESP Show Name", function(v) features.esp:SetSetting("showName", v) end) })
+espOpt:AddLabel("Distance"):AddToggle({ Default = false, Callback = safeUi("ESP Show Distance", function(v) features.esp:SetSetting("showDistance", v) end) })
+espOpt:AddLabel("Skeleton"):AddToggle({ Default = false, Callback = safeUi("ESP Show Skeleton", function(v) features.esp:SetSetting("showSkeleton", v) end) })
+espOpt:AddLabel("Tracers"):AddToggle({ Default = false, Callback = safeUi("ESP Show Tracers", function(v) features.esp:SetSetting("showTracers", v) end) })
+espOpt:AddLabel("Weapon"):AddToggle({ Default = false, Callback = safeUi("ESP Show Weapon", function(v) features.esp:SetSetting("showWeapon", v) end) })
+espOpt:AddLabel("Money"):AddToggle({ Default = false, Callback = safeUi("ESP Show Money", function(v) features.esp:SetSetting("showMoney", v) end) })
+espOpt:AddLabel("Flags"):AddToggle({ Default = false, Callback = safeUi("ESP Show Flags", function(v) features.esp:SetSetting("showFlags", v) end) })
+espOpt:AddLabel("Chams Overlays"):AddToggle({ Default = false, Callback = safeUi("ESP Show Chams", function(v) features.esp:SetSetting("showChams", v) end) })
+
+EspSection:AddLabel("Text Size"):AddSlider({ Min = 10, Max = 20, Default = 11, Step = 1, Callback = safeUi("ESP Text Size", function(v) features.esp:SetSetting("textSize", v) end) })
+EspSection:AddLabel("Box Thickness"):AddSlider({ Min = 1, Max = 3, Default = 1, Step = 0.1, Callback = safeUi("ESP Box Thickness", function(v) features.esp:SetSetting("boxThickness", v) end) })
+EspSection:AddLabel("Max Distance"):AddSlider({ Min = 0, Max = 500, Default = 0, Step = 10, Callback = safeUi("ESP Max Distance", function(v) features.esp:SetSetting("maxDistance", v) end) })
+
+local ChamsSection = VisualsTab:AddSection({ Name = "CHAMS", Position = 'left' })
+ChamsSection:AddLabel("Rainbow Chams"):AddToggle({ Default = false, Callback = safeUi("Chams Rainbow", function(v) features.chams:SetSetting("rainbow", v) end) })
+ChamsSection:AddLabel("Rainbow Speed"):AddSlider({ Min = 0.1, Max = 10, Default = 2, Step = 0.1, Callback = safeUi("Chams Rainbow Speed", function(v) features.chams:SetSetting("rainbowSpeed", v) end) })
+
+local pchams = ChamsSection:AddLabel("Player Chams"):AddToggle({ Default = false, Callback = safeUi("Player Chams Enabled", function(v) features.chams:SetSetting("playerEnabled", v) end) })
+local pcOpt = pchams:AddOption()
+pcOpt:AddLabel("Team Check"):AddToggle({ Default = false, Callback = safeUi("Player Chams Team Check", function(v) features.chams:SetSetting("playerTeamCheck", v) end) })
+pcOpt:AddLabel("Visible Only"):AddToggle({ Default = false, Callback = safeUi("Player Chams Visible Only", function(v) features.chams:SetSetting("playerVisibleOnly", v) end) })
+pcOpt:AddLabel("Color"):AddColorPicker({ Default = Color3.fromRGB(255, 0, 0), Callback = safeUi("Player Chams Color", function(v) features.chams:SetSetting("playerColor", v) end) })
+ChamsSection:AddLabel("Player Fill"):AddSlider({ Min = 0, Max = 1, Default = 0.7, Step = 0.05, Callback = safeUi("Player Chams Fill", function(v) features.chams:SetSetting("playerFillTransparency", v) end) })
+ChamsSection:AddLabel("Player Outline"):AddSlider({ Min = 0, Max = 1, Default = 0, Step = 0.05, Callback = safeUi("Player Chams Outline", function(v) features.chams:SetSetting("playerOutlineTransparency", v) end) })
+
+local wchams = ChamsSection:AddLabel("Weapon Chams"):AddToggle({ Default = false, Callback = safeUi("Weapon Chams Enabled", function(v) features.chams:SetSetting("weaponEnabled", v) end) })
+local wcOpt = wchams:AddOption()
+wcOpt:AddLabel("Color"):AddColorPicker({ Default = Color3.fromRGB(0, 255, 255), Callback = safeUi("Weapon Chams Color", function(v) features.chams:SetSetting("weaponColor", v) end) })
+ChamsSection:AddLabel("Weapon Fill"):AddSlider({ Min = 0, Max = 1, Default = 0.5, Step = 0.05, Callback = safeUi("Weapon Chams Fill", function(v) features.chams:SetSetting("weaponFillTransparency", v) end) })
+ChamsSection:AddLabel("Weapon Outline"):AddSlider({ Min = 0, Max = 1, Default = 0, Step = 0.05, Callback = safeUi("Weapon Chams Outline", function(v) features.chams:SetSetting("weaponOutlineTransparency", v) end) })
+
+local WorldSection = VisualsTab:AddSection({ Name = "WORLD & EFFECTS", Position = 'right' })
+local keToggle = WorldSection:AddLabel("Kill Effects"):AddToggle({ Default = false, Callback = safeUi("Kill Effects Enabled", function(v) features.killEffects:SetSetting("enabled", v) end) })
+local keOpt = keToggle:AddOption()
+keOpt:AddLabel("Color"):AddColorPicker({ Default = Color3.fromRGB(255, 0, 100), Callback = safeUi("Kill Effect Color", function(v) features.killEffects:SetSetting("color", v) end) })
+WorldSection:AddLabel("Kill Duration"):AddSlider({ Min = 0.3, Max = 2, Default = 0.8, Step = 0.1, Callback = safeUi("Kill Effect Duration", function(v) features.killEffects:SetSetting("duration", v) end) })
+WorldSection:AddLabel("Kill Intensity"):AddSlider({ Min = 0.2, Max = 1, Default = 0.6, Step = 0.1, Callback = safeUi("Kill Effect Intensity", function(v) features.killEffects:SetSetting("intensity", v) end) })
+
+WorldSection:AddLabel("Anti Flash"):AddToggle({ Default = false, Callback = safeUi("Anti Flash", function(v) features.worldEffects:SetSetting("antiFlash", v) end) })
+WorldSection:AddLabel("Anti Smoke"):AddToggle({ Default = false, Callback = safeUi("Anti Smoke", function(v) features.worldEffects:SetSetting("antiSmoke", v) end) })
+
+
+local SkinSection = SkinsTab:AddSection({ Name = "SKINCHANGER", Position = 'left' })
+SkinSection:AddLabel("Weapon Skins"):AddToggle({ Default = false, Callback = safeUi("Weapon Skin Changer Enabled", function(v) features.skinchanger:SetSkinChangerEnabled(v) end) })
+SkinSection:AddLabel("Knife Changer"):AddToggle({ Default = false, Callback = safeUi("Knife Changer Enabled", function(v) features.skinchanger:SetKnifeChangerEnabled(v) end) })
+SkinSection:AddLabel("Glove Changer"):AddToggle({ Default = false, Callback = safeUi("Glove Changer Enabled", function(v) features.skinchanger:SetGloveChangerEnabled(v) end) })
 
 local knifeModels = features.skinchanger:GetKnifeModels()
+local knifeModelDropdown
 local knifeSkinDropdown
-local knifeModelDropdown = window:addDropdown(
-    "Knife Model",
-    knifeModels,
-    features.skinchanger:GetKnifeModel(),
-    safeUi("Knife Model", function(value)
+
+knifeModelDropdown = SkinSection:AddLabel("Knife Model"):AddDropdown({
+    Values = knifeModels,
+    Default = features.skinchanger:GetKnifeModel(),
+    Callback = safeUi("Knife Model", function(value)
         features.skinchanger:SetKnifeModel(value)
         if knifeSkinDropdown then
             local knifeModel = features.skinchanger:GetKnifeModel()
@@ -363,298 +334,90 @@ local knifeModelDropdown = window:addDropdown(
             knifeSkinDropdown.set(features.skinchanger:GetWeaponSkin(knifeModel))
         end
     end)
-)
+})
 
-knifeSkinDropdown = window:addDropdown(
-    "Knife Skin",
-    features.skinchanger:GetSkinOptions(features.skinchanger:GetKnifeModel()),
-    features.skinchanger:GetWeaponSkin(features.skinchanger:GetKnifeModel()),
-    safeUi("Knife Skin", function(value)
+knifeSkinDropdown = SkinSection:AddLabel("Knife Skin"):AddDropdown({
+    Values = features.skinchanger:GetSkinOptions(features.skinchanger:GetKnifeModel()),
+    Default = features.skinchanger:GetWeaponSkin(features.skinchanger:GetKnifeModel()),
+    Callback = safeUi("Knife Skin", function(value)
         features.skinchanger:SetWeaponSkin(features.skinchanger:GetKnifeModel(), value)
     end)
-)
+})
 
 local function refreshKnifeSkinDropdown()
     local knifeModel = features.skinchanger:GetKnifeModel()
-    knifeSkinDropdown.refresh(features.skinchanger:GetSkinOptions(knifeModel))
-    knifeSkinDropdown.set(features.skinchanger:GetWeaponSkin(knifeModel))
+    if knifeSkinDropdown and knifeSkinDropdown.refresh then
+        knifeSkinDropdown.refresh(features.skinchanger:GetSkinOptions(knifeModel))
+        knifeSkinDropdown.set(features.skinchanger:GetWeaponSkin(knifeModel))
+    end
 end
-
-local function queueSkinchangerConfigSync()
-    task.spawn(function()
-        task.wait(0.05)
-        pcall(refreshKnifeSkinDropdown)
-        pcall(function()
-            features.skinchanger:ApplyNow()
-        end)
-        task.wait(0.35)
-        pcall(function()
-            features.skinchanger:ApplyNow()
-        end)
-        task.wait(0.8)
-        pcall(function()
-            features.skinchanger:ApplyNow()
-        end)
-    end)
-end
-
-knifeModelDropdown.set(features.skinchanger:GetKnifeModel())
-refreshKnifeSkinDropdown()
-
-window:addToggle("Glove Changer Enabled", false, safeUi("Glove Changer Enabled", function(value)
-    features.skinchanger:SetGloveChangerEnabled(value)
-end))
 
 local gloveModels = features.skinchanger:GetGloveModels()
 local selectedGloveModel = features.skinchanger:GetGloveModel() or gloveModels[1] or "Default"
 local gloveSkinDropdown
 
-local gloveModelDropdown = window:addDropdown(
-    "Glove Model",
-    gloveModels,
-    selectedGloveModel,
-    safeUi("Glove Model", function(value)
+local gloveModelDropdown = SkinSection:AddLabel("Glove Model"):AddDropdown({
+    Values = gloveModels,
+    Default = selectedGloveModel,
+    Callback = safeUi("Glove Model", function(value)
         features.skinchanger:SetGloveModel(value)
         local skinOptions = features.skinchanger:GetGloveSkinOptions(value)
-        if gloveSkinDropdown then
+        if gloveSkinDropdown and gloveSkinDropdown.refresh then
             gloveSkinDropdown.refresh(skinOptions)
             gloveSkinDropdown.set(features.skinchanger:GetGloveSkin(value))
         end
     end)
-)
+})
 
-gloveSkinDropdown = window:addDropdown(
-    "Glove Skin",
-    features.skinchanger:GetGloveSkinOptions(selectedGloveModel),
-    features.skinchanger:GetGloveSkin(selectedGloveModel),
-    safeUi("Glove Skin", function(value)
+gloveSkinDropdown = SkinSection:AddLabel("Glove Skin"):AddDropdown({
+    Values = features.skinchanger:GetGloveSkinOptions(selectedGloveModel),
+    Default = features.skinchanger:GetGloveSkin(selectedGloveModel),
+    Callback = safeUi("Glove Skin", function(value)
         features.skinchanger:SetGloveSkin(value)
     end)
-)
+})
 
-window:addSlider("Skin Inventory Refresh Rate", 1, 10, 2, 1, safeUi("Skin Inventory Refresh Rate", function(value)
-    features.skinchanger:SetInventoryRefreshRate(value)
-end))
-window:addButton("Apply Skin Changes", safeUi("Apply Skin Changes", function()
+SkinSection:AddLabel("Inventory Refresh Rate"):AddSlider({ Min = 1, Max = 10, Default = 2, Step = 1, Callback = safeUi("Skin Inventory Refresh Rate", function(v) features.skinchanger:SetInventoryRefreshRate(v) end) })
+SkinSection:AddButton({ Name = "Apply Skin Changes", Callback = safeUi("Apply Skin Changes", function()
     features.skinchanger:ApplyNow()
     refreshKnifeSkinDropdown()
-end))
+end) })
 
-window:addSection("Weapon Skins")
+local WeaponSkinsSection = SkinsTab:AddSection({ Name = "WEAPONS", Position = 'right' })
 for _, weaponName in ipairs(features.skinchanger:GetWeaponNames()) do
     if not features.skinchanger:IsKnifeModel(weaponName) then
-        window:addDropdown(
-            "Skin - " .. weaponName,
-            features.skinchanger:GetSkinOptions(weaponName),
-            features.skinchanger:GetWeaponSkin(weaponName),
-            safeUi("Skin - " .. weaponName, function(value)
+        WeaponSkinsSection:AddLabel(weaponName):AddDropdown({
+            Values = features.skinchanger:GetSkinOptions(weaponName),
+            Default = features.skinchanger:GetWeaponSkin(weaponName),
+            Callback = safeUi("Skin - " .. weaponName, function(value)
                 features.skinchanger:SetWeaponSkin(weaponName, value)
             end)
-        )
+        })
     end
 end
 
-window:switchTab(visualsTab)
-window:addSection("ESP")
-window:addToggle("ESP Enabled", false, safeUi("ESP Enabled", function(value)
-    features.esp:SetSetting("enabled", value)
-end))
-window:addToggle("ESP Team Check", false, safeUi("ESP Team Check", function(value)
-    features.esp:SetSetting("teamCheck", value)
-end))
-window:addToggle("ESP Show Box", false, safeUi("ESP Show Box", function(value)
-    features.esp:SetSetting("showBox", value)
-end))
-window:addToggle("ESP Show Health", false, safeUi("ESP Show Health", function(value)
-    features.esp:SetSetting("showHealth", value)
-end))
-window:addToggle("ESP Show Name", false, safeUi("ESP Show Name", function(value)
-    features.esp:SetSetting("showName", value)
-end))
-window:addToggle("ESP Show Distance", false, safeUi("ESP Show Distance", function(value)
-    features.esp:SetSetting("showDistance", value)
-end))
-window:addToggle("ESP Show Skeleton", false, safeUi("ESP Show Skeleton", function(value)
-    features.esp:SetSetting("showSkeleton", value)
-end))
-window:addToggle("ESP Show Tracers", false, safeUi("ESP Show Tracers", function(value)
-    features.esp:SetSetting("showTracers", value)
-end))
-window:addToggle("ESP Show Weapon", false, safeUi("ESP Show Weapon", function(value)
-    features.esp:SetSetting("showWeapon", value)
-end))
-window:addToggle("ESP Show Money", false, safeUi("ESP Show Money", function(value)
-    features.esp:SetSetting("showMoney", value)
-end))
-window:addToggle("ESP Show Flags", false, safeUi("ESP Show Flags", function(value)
-    features.esp:SetSetting("showFlags", value)
-end))
-window:addToggle("ESP Show Chams", false, safeUi("ESP Show Chams", function(value)
-    features.esp:SetSetting("showChams", value)
-end))
-window:addSlider("ESP Text Size", 10, 20, 11, 1, safeUi("ESP Text Size", function(value)
-    features.esp:SetSetting("textSize", value)
-end))
-window:addSlider("ESP Box Thickness", 1, 3, 1, 0.1, safeUi("ESP Box Thickness", function(value)
-    features.esp:SetSetting("boxThickness", value)
-end))
-window:addSlider("ESP Max Distance", 0, 500, 0, 10, safeUi("ESP Max Distance", function(value)
-    features.esp:SetSetting("maxDistance", value)
-end))
 
-window:addSection("Chams")
-window:addToggle("Chams Rainbow", false, safeUi("Chams Rainbow", function(value)
-    features.chams:SetSetting("rainbow", value)
-end))
-window:addSlider("Chams Rainbow Speed", 0.1, 10, 2, 0.1, safeUi("Chams Rainbow Speed", function(value)
-    features.chams:SetSetting("rainbowSpeed", value)
-end))
-window:addToggle("Player Chams Enabled", false, safeUi("Player Chams Enabled", function(value)
-    features.chams:SetSetting("playerEnabled", value)
-end))
-window:addToggle("Player Chams Team Check", false, safeUi("Player Chams Team Check", function(value)
-    features.chams:SetSetting("playerTeamCheck", value)
-end))
-window:addToggle("Visible Only", false, safeUi("Player Chams Visible Only", function(value)
-    features.chams:SetSetting("playerVisibleOnly", value)
-end))
-window:addSlider("Player Chams Fill", 0, 1, 0.7, 0.05, safeUi("Player Chams Fill", function(value)
-    features.chams:SetSetting("playerFillTransparency", value)
-end))
-window:addSlider("Player Chams Outline", 0, 1, 0, 0.05, safeUi("Player Chams Outline", function(value)
-    features.chams:SetSetting("playerOutlineTransparency", value)
-end))
-window:addColorPicker("Player Chams Color", Color3.fromRGB(255, 0, 0), safeUi("Player Chams Color", function(value)
-    features.chams:SetSetting("playerColor", value)
-end))
-window:addToggle("Weapon Chams Enabled", false, safeUi("Weapon Chams Enabled", function(value)
-    features.chams:SetSetting("weaponEnabled", value)
-end))
-window:addSlider("Weapon Chams Fill", 0, 1, 0.5, 0.05, safeUi("Weapon Chams Fill", function(value)
-    features.chams:SetSetting("weaponFillTransparency", value)
-end))
-window:addSlider("Weapon Chams Outline", 0, 1, 0, 0.05, safeUi("Weapon Chams Outline", function(value)
-    features.chams:SetSetting("weaponOutlineTransparency", value)
-end))
-window:addColorPicker("Weapon Chams Color", Color3.fromRGB(0, 255, 255), safeUi("Weapon Chams Color", function(value)
-    features.chams:SetSetting("weaponColor", value)
-end))
+local MiscSection = MiscTab:AddSection({ Name = "MOVEMENT", Position = 'left' })
+MiscSection:AddLabel("Bunny Hop"):AddToggle({ Default = false, Callback = safeUi("Bunny Hop Enabled", function(v) features.bunnyHop:SetEnabled(v) end) })
 
---[[window:addSection("Bullet Tracers")
-window:addToggle("Bullet Tracers Enabled", false, safeUi("Bullet Tracers Enabled", function(value)
-    features.bulletTracers:SetSetting("enabled", value)
-end))
-window:addDropdown("Bullet Tracer Pattern", { "Straight", "Wave", "Spiral", "Dashed" }, "Straight", safeUi("Bullet Tracer Pattern", function(value)
-    features.bulletTracers:SetSetting("pattern", value)
-end))
-window:addSlider("Bullet Tracer Transparency", 0, 1, 0.3, 0.05, safeUi("Bullet Tracer Transparency", function(value)
-    features.bulletTracers:SetSetting("transparency", value)
-end))
-window:addSlider("Bullet Tracer Duration", 0.1, 2, 0.6, 0.1, safeUi("Bullet Tracer Duration", function(value)
-    features.bulletTracers:SetSetting("duration", value)
-end))
-window:addSlider("Bullet Tracer Thickness", 0.1, 1, 0.2, 0.05, safeUi("Bullet Tracer Thickness", function(value)
-    features.bulletTracers:SetSetting("thickness", value)
-end))
-window:addColorPicker("Bullet Tracer Color", Color3.fromRGB(0, 255, 255), safeUi("Bullet Tracer Color", function(value)
-    features.bulletTracers:SetSetting("color", value)
-end))]]
-
---[[window:addSection("Particle Effects")
-window:addToggle("Particle Effects Enabled", false, safeUi("Particle Effects Enabled", function(value)
-    features.particleEffects:SetSetting("enabled", value)
-end))
-window:addSlider("Particle Amount", 5, 80, 25, 5, safeUi("Particle Amount", function(value)
-    features.particleEffects:SetSetting("amount", value)
-end))
-window:addSlider("Particle Lifetime", 0.3, 3, 1.2, 0.1, safeUi("Particle Lifetime", function(value)
-    features.particleEffects:SetSetting("lifetime", value)
-end))
-window:addDropdown("Particle Style", { "Spark", "Smoke", "Fire", "Explosion", "Magic" }, "Spark", safeUi("Particle Style", function(value)
-    features.particleEffects:SetSetting("style", value)
-end))
-window:addColorPicker("Particle Color", Color3.fromRGB(255, 100, 0), safeUi("Particle Color", function(value)
-    features.particleEffects:SetSetting("color", value)
-end))]]
-
-window:addSection("Kill Effects")
-window:addToggle("Kill Effects Enabled", false, safeUi("Kill Effects Enabled", function(value)
-    features.killEffects:SetSetting("enabled", value)
-end))
-window:addSlider("Kill Effect Duration", 0.3, 2, 0.8, 0.1, safeUi("Kill Effect Duration", function(value)
-    features.killEffects:SetSetting("duration", value)
-end))
-window:addSlider("Kill Effect Intensity", 0.2, 1, 0.6, 0.1, safeUi("Kill Effect Intensity", function(value)
-    features.killEffects:SetSetting("intensity", value)
-end))
-window:addColorPicker("Kill Effect Color", Color3.fromRGB(255, 0, 100), safeUi("Kill Effect Color", function(value)
-    features.killEffects:SetSetting("color", value)
-end))
-
-window:addSection("World Effects")
-window:addToggle("Anti Flash", false, safeUi("Anti Flash", function(value)
-    features.worldEffects:SetSetting("antiFlash", value)
-end))
-window:addToggle("Anti Smoke", false, safeUi("Anti Smoke", function(value)
-    features.worldEffects:SetSetting("antiSmoke", value)
-end))
-
-do
-    local originalLoadConfig = window.loadConfig
-    function window:loadConfig(name)
-        local ok, err = originalLoadConfig(self, name)
-        if ok then
-            queueSkinchangerConfigSync()
-        end
-        return ok, err
-    end
-end
-
-window:switchTab(configTab)
-window:addConfigManager("default")
-
-task.defer(function()
-    local okList, configNames = pcall(function()
-        return window:listConfigs()
-    end)
-    if not okList or type(configNames) ~= "table" or #configNames == 0 then
-        return
-    end
-
-    local selectedConfig = nil
-    local latestSavedAt = nil
-
-    for _, configName in ipairs(configNames) do
-        local normalizedName = tostring(configName):lower()
-        if normalizedName ~= "default" then
-            local payload = nil
-            pcall(function()
-                if window._readJsonFile and window._getConfigFilePath then
-                    payload = window:_readJsonFile(window:_getConfigFilePath(configName))
-                end
-            end)
-
-            local savedAt = type(payload) == "table"
-                and type(payload.meta) == "table"
-                and payload.meta.saved_at
-
-            if type(savedAt) == "string" and (not latestSavedAt or savedAt > latestSavedAt) then
-                latestSavedAt = savedAt
-                selectedConfig = configName
-            elseif not selectedConfig then
-                selectedConfig = configName
-            end
+window.UserSettings:AddLabel("Menu Keybind"):AddKeybind({ Default = 'RightShift', Callback = function(v) window.Keybind = v end })
+window.UserSettings:AddLabel("Menu Scale"):AddDropdown({ Values = {"Default", "Large", "Mobile", "Small"}, Default = "Default", Callback = function(v) window:SetSize(NeverLose.Scales[v]) end })
+window.UserSettings:AddLabel("3D Menu"):AddToggle({ Default = false, Callback = function(v) pcall(function() window:Set3DRender(v) end) end })
+window.UserSettings:AddButton({
+    Icon = 'x',
+    Name = "Unload Script",
+    Callback = function()
+        if getgenv and getgenv().BloxtrikeCleanup then
+            pcall(getgenv().BloxtrikeCleanup)
         end
     end
+})
 
-    if selectedConfig then
-        pcall(function()
-            window:loadConfig(selectedConfig)
-        end)
-    end
-end)
-
-window:notify("Bloxtrike", "loaded.", nil, false)
+Notification.new({
+    Title = "Bloxtrike",
+    Content = "Script loaded successfully!",
+    Duration = 5
+})
 
 return {
     window = window,
