@@ -111,7 +111,7 @@ local ESP = loadLocal("src/features/visuals/ESP.lua")
 local Chams = loadLocal("src/features/visuals/Chams.lua")
 local KillEffects = loadLocal("src/features/visuals/KillEffects.lua")
 local WorldVisuals = loadLocal("src/features/visuals/WorldVisuals.lua")
-local ThreatVisuals = loadLocal("src/features/visuals/ThreatVisuals.lua")
+local HazardTracker = loadLocal("src/features/visuals/ThreatVisuals.lua")
 local Skinchanger = loadLocal("src/features/skins/Skinchanger.lua")
 local BulletTracers = loadLocal("src/features/visuals/BulletTracers.lua")
 
@@ -140,7 +140,7 @@ local features = {
     chams = Chams.new(context),
     killEffects = KillEffects.new(context),
     worldVisuals = WorldVisuals.new(context),
-    threatVisuals = ThreatVisuals.new(context),
+    hazardTracker = HazardTracker.new(context),
     skinchanger = Skinchanger.new(context),
     bulletTracers = BulletTracers.new(context),
 }
@@ -317,11 +317,11 @@ WorldSection:AddLabel("Anti Smoke"):AddToggle({ Default = false, Callback = safe
 WorldSection:AddLabel("External View"):AddToggle({ Default = false, Callback = safeUi("External View", function(v) features.worldVisuals:SetSetting("externalView", v) end) })
 WorldSection:AddLabel("View Depth"):AddSlider({ Min = 5, Max = 25, Default = 8, Step = 1, Callback = safeUi("View Depth", function(v) features.worldVisuals:SetSetting("cameraDepth", v) end) })
 
-local ThreatSection = VisualsTab:AddSection({ Name = "THREATS", Position = 'right' })
-ThreatSection:AddLabel("Device Scanner"):AddToggle({ Default = false, Callback = safeUi("Device Scanner", function(v) features.threatVisuals:SetSetting("deviceScanner", v) end) })
-ThreatSection:AddLabel("Explosive Path"):AddToggle({ Default = false, Callback = safeUi("Explosive Path", function(v) features.threatVisuals:SetSetting("explosivePath", v) end) })
-ThreatSection:AddLabel("Gaze Indicators"):AddToggle({ Default = false, Callback = safeUi("Gaze Indicators", function(v) features.threatVisuals:SetSetting("gazeIndicators", v) end) })
-ThreatSection:AddLabel("Gaze Length"):AddSlider({ Min = 5, Max = 50, Default = 15, Step = 1, Callback = safeUi("Gaze Length", function(v) features.threatVisuals:SetSetting("indicatorReach", v) end) })
+local ThreatSection = VisualsTab:AddSection({ Name = "HAZARDS", Position = 'right' })
+ThreatSection:AddLabel("Hazard Scan"):AddToggle({ Default = false, Callback = safeUi("Hazard Scan", function(v) features.hazardTracker:SetSetting("deviceScanner", v) end) })
+ThreatSection:AddLabel("Impact Trail"):AddToggle({ Default = false, Callback = safeUi("Impact Trail", function(v) features.hazardTracker:SetSetting("explosivePath", v) end) })
+ThreatSection:AddLabel("Focus Lines"):AddToggle({ Default = false, Callback = safeUi("Focus Lines", function(v) features.hazardTracker:SetSetting("gazeIndicators", v) end) })
+ThreatSection:AddLabel("Focus Reach"):AddSlider({ Min = 5, Max = 50, Default = 15, Step = 1, Callback = safeUi("Focus Reach", function(v) features.hazardTracker:SetSetting("indicatorReach", v) end) })
 
 local TracersSection = VisualsTab:AddSection({ Name = "BULLET TRACERS", Position = 'right' })
 local btLabel = TracersSection:AddLabel("Tracers Enabled")
