@@ -444,7 +444,7 @@ end
 
 
 local MiscSection = MiscTab:AddSection({ Name = "Movement", Position = 'left' })
-MiscSection:AddLabel("Enable Physics"):AddToggle({ Default = false, Callback = safeUi("Movement", function(v) features.movement:SetEnabled(v) end) })
+MiscSection:AddLabel("Strafes"):AddToggle({ Default = false, Callback = safeUi("Movement", function(v) features.movement:SetEnabled(v) end) })
 MiscSection:AddLabel("Bunny Hop"):AddToggle({ Default = false, Callback = safeUi("Bunny Hop", function(v) features.movement:SetSetting("bunnyHop", v) end) })
 MiscSection:AddLabel("Aerial Glide"):AddToggle({ Default = false, Callback = safeUi("Aerial Glide", function(v) features.movement:SetSetting("aerialGlide", v) end) })
 MiscSection:AddLabel("Speed"):AddSlider({ Min = 16, Max = 100, Default = 16, Step = 1, Callback = safeUi("Speed", function(v) features.movement:SetSetting("motionScale", v) end) })
