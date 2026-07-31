@@ -343,8 +343,12 @@ knifeModelDropdown = SkinSection:AddLabel("Knife Model"):AddDropdown({
         features.skinchanger:SetKnifeModel(value)
         if knifeSkinDropdown then
             local knifeModel = features.skinchanger:GetKnifeModel()
-            knifeSkinDropdown.refresh(features.skinchanger:GetSkinOptions(knifeModel))
-            knifeSkinDropdown.set(features.skinchanger:GetWeaponSkin(knifeModel))
+            if knifeSkinDropdown.SetValues then
+                knifeSkinDropdown:SetValues(features.skinchanger:GetSkinOptions(knifeModel))
+            end
+            if knifeSkinDropdown.SetValue then
+                knifeSkinDropdown:SetValue(features.skinchanger:GetWeaponSkin(knifeModel))
+            end
         end
     end)
 })
@@ -359,9 +363,13 @@ knifeSkinDropdown = SkinSection:AddLabel("Knife Skin"):AddDropdown({
 
 local function refreshKnifeSkinDropdown()
     local knifeModel = features.skinchanger:GetKnifeModel()
-    if knifeSkinDropdown and knifeSkinDropdown.refresh then
-        knifeSkinDropdown.refresh(features.skinchanger:GetSkinOptions(knifeModel))
-        knifeSkinDropdown.set(features.skinchanger:GetWeaponSkin(knifeModel))
+    if knifeSkinDropdown then
+        if knifeSkinDropdown.SetValues then
+            knifeSkinDropdown:SetValues(features.skinchanger:GetSkinOptions(knifeModel))
+        end
+        if knifeSkinDropdown.SetValue then
+            knifeSkinDropdown:SetValue(features.skinchanger:GetWeaponSkin(knifeModel))
+        end
     end
 end
 
@@ -375,9 +383,13 @@ local gloveModelDropdown = SkinSection:AddLabel("Glove Model"):AddDropdown({
     Callback = safeUi("Glove Model", function(value)
         features.skinchanger:SetGloveModel(value)
         local skinOptions = features.skinchanger:GetGloveSkinOptions(value)
-        if gloveSkinDropdown and gloveSkinDropdown.refresh then
-            gloveSkinDropdown.refresh(skinOptions)
-            gloveSkinDropdown.set(features.skinchanger:GetGloveSkin(value))
+        if gloveSkinDropdown then
+            if gloveSkinDropdown.SetValues then
+                gloveSkinDropdown:SetValues(skinOptions)
+            end
+            if gloveSkinDropdown.SetValue then
+                gloveSkinDropdown:SetValue(features.skinchanger:GetGloveSkin(value))
+            end
         end
     end)
 })
