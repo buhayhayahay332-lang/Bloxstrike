@@ -153,7 +153,6 @@ local function safeUi(label, fn)
     return errorHandler:Wrap("UI - " .. label, fn)
 end
 
--- NEVERLOSE UI INITIALIZATION
 local NeverLose = loadstring(game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/NeverLose/refs/heads/main/source.luau"))()
 
 local Notification = NeverLose:CreateNotification()
@@ -162,13 +161,13 @@ local Indicator = NeverLose:CreateIndicator()
 
 local window = NeverLose:CreateWindow({
     Logo = "rbxassetid://13129527031",
-    Name = "Bloxtrike",
-    Content = "Bloxtrike | discord.gg/NtBMqWXySm",
-    Size = NeverLose.Scales.Default,
+    Name = "ASTRO.WTF",
+    Content = "Bloxtrike",
+    Size = NeverLose.Scales.Large,
     ConfigFolder = "Bloxtrike",
     Enable3DRenderer = true,
     Keybind = "RightShift"
-})
+})  
 
 if getgenv then
     getgenv().BloxtrikeCleanup = function()
@@ -178,11 +177,8 @@ if getgenv then
     end
 end
 
--- WATERMARK
 local Watermark = window:Watermark()
-Watermark:AddBlock("cube-vertexes", "ASTRO.WTF")
-Watermark:AddBlock("person", game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer.Name or "User")
-local discordBlock = Watermark:AddBlock("link", "discord.gg/NtBMqWXySm")
+local discordBlock = Watermark:AddBlock("discord", "discord.gg/NtBMqWXySm")
 if discordBlock then
     pcall(function()
         discordBlock.MouseButton1Click:Connect(function()
@@ -194,19 +190,8 @@ if discordBlock then
     end)
 end
 
-local pingBlock = Watermark:AddBlock("radio", "Ping: 0ms")
-task.spawn(function()
-    while task.wait(2) do
-        pcall(function()
-            local ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
-            if pingBlock and pingBlock:FindFirstChild("Text") then
-                pingBlock.Text.Text = "Ping: " .. tostring(ping) .. "ms"
-            end
-        end)
-    end
-end)
 
--- TABS
+
 window:AddTabLabel('MAIN')
 local CombatTab = window:AddTab({ Icon = 'crosshair', Name = "Combat" })
 local VisualsTab = window:AddTab({ Icon = 'eye', Name = "Visuals" })
@@ -217,7 +202,6 @@ local SkinsTab = window:AddTab({ Icon = 'sparkles', Name = "Skins" })
 window:AddTabLabel('MISC')
 local MiscTab = window:AddTab({ Icon = 'backpack', Name = "Misc" })
 
--- ==================== COMBAT TAB ====================
 local AimSection = CombatTab:AddSection({ Name = "AIMBOT", Position = 'left' })
 local aimLabel = AimSection:AddLabel("Aimbot")
 aimLabel:AddToggle({
@@ -273,7 +257,6 @@ WeaponModsSection:AddLabel("RCS Strength"):AddSlider({ Min = 0, Max = 100, Defau
 WeaponModsSection:AddLabel("RCS Delay"):AddSlider({ Min = 0, Max = 500, Default = 0, Step = 1, Callback = safeUi("RCS Delay", function(v) features.rage:SetRcsDelay(v) end) })
 
 
--- ==================== VISUALS TAB ====================
 local EspSection = VisualsTab:AddSection({ Name = "PLAYER ESP", Position = 'left' })
 local espLabel = EspSection:AddLabel("ESP Enabled")
 espLabel:AddToggle({ Default = false, Callback = safeUi("ESP Enabled", function(v) features.esp:SetSetting("enabled", v) end) })
@@ -326,7 +309,6 @@ WorldSection:AddLabel("Anti Flash"):AddToggle({ Default = false, Callback = safe
 WorldSection:AddLabel("Anti Smoke"):AddToggle({ Default = false, Callback = safeUi("Anti Smoke", function(v) features.worldEffects:SetSetting("antiSmoke", v) end) })
 
 
--- ==================== SKINS TAB ====================
 local SkinSection = SkinsTab:AddSection({ Name = "SKINCHANGER", Position = 'left' })
 SkinSection:AddLabel("Weapon Skins"):AddToggle({ Default = false, Callback = safeUi("Weapon Skin Changer Enabled", function(v) features.skinchanger:SetSkinChangerEnabled(v) end) })
 SkinSection:AddLabel("Knife Changer"):AddToggle({ Default = false, Callback = safeUi("Knife Changer Enabled", function(v) features.skinchanger:SetKnifeChangerEnabled(v) end) })
@@ -422,11 +404,9 @@ for _, weaponName in ipairs(features.skinchanger:GetWeaponNames()) do
 end
 
 
--- ==================== MISC TAB ====================
 local MiscSection = MiscTab:AddSection({ Name = "MOVEMENT", Position = 'left' })
 MiscSection:AddLabel("Bunny Hop"):AddToggle({ Default = false, Callback = safeUi("Bunny Hop Enabled", function(v) features.bunnyHop:SetEnabled(v) end) })
 
--- USER SETTINGS / SYSTEM
 window.UserSettings:AddLabel("Menu Keybind"):AddKeybind({ Default = 'RightShift', Callback = function(v) window.Keybind = v end })
 window.UserSettings:AddLabel("Menu Scale"):AddDropdown({ Values = {"Default", "Large", "Mobile", "Small"}, Default = "Default", Callback = function(v) window:SetSize(NeverLose.Scales[v]) end })
 window.UserSettings:AddLabel("3D Menu"):AddToggle({ Default = false, Callback = function(v) pcall(function() window:Set3DRender(v) end) end })
