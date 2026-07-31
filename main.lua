@@ -106,12 +106,14 @@ local Aimbot = loadLocal("src/features/combat/Aimbot.lua")
 local TriggerBot = loadLocal("src/features/combat/TriggerBot.lua")
 local Hitbox = loadLocal("src/features/combat/Hitbox.lua")
 local Rage = loadLocal("src/features/combat/Rage.lua")
-local BunnyHop = loadLocal("src/features/movement/BunnyHop.lua")
+local Movement = loadLocal("src/features/movement/Movement.lua")
 local ESP = loadLocal("src/features/visuals/ESP.lua")
 local Chams = loadLocal("src/features/visuals/Chams.lua")
 local KillEffects = loadLocal("src/features/visuals/KillEffects.lua")
-local WorldEffects = loadLocal("src/features/visuals/WorldEffects.lua")
+local WorldVisuals = loadLocal("src/features/visuals/WorldVisuals.lua")
+local ThreatVisuals = loadLocal("src/features/visuals/ThreatVisuals.lua")
 local Skinchanger = loadLocal("src/features/skins/Skinchanger.lua")
+local BulletTracers = loadLocal("src/features/visuals/BulletTracers.lua")
 
 local globals = GlobalsFactory(Services)
 local errorHandler = ErrorHandler.new(Services)
@@ -133,12 +135,14 @@ local features = {
     triggerBot = TriggerBot.new(context),
     hitbox = Hitbox.new(context),
     rage = Rage.new(context),
-    bunnyHop = BunnyHop.new(context),
+    movement = Movement.new(context),
     esp = ESP.new(context),
     chams = Chams.new(context),
     killEffects = KillEffects.new(context),
-    worldEffects = WorldEffects.new(context),
+    worldVisuals = WorldVisuals.new(context),
+    threatVisuals = ThreatVisuals.new(context),
     skinchanger = Skinchanger.new(context),
+    bulletTracers = BulletTracers.new(context),
 }
 
 for _, feature in pairs(features) do
@@ -305,8 +309,40 @@ keOpt:AddLabel("Color"):AddColorPicker({ Default = Color3.fromRGB(255, 0, 100), 
 WorldSection:AddLabel("Kill Duration"):AddSlider({ Min = 0.3, Max = 2, Default = 0.8, Step = 0.1, Callback = safeUi("Kill Effect Duration", function(v) features.killEffects:SetSetting("duration", v) end) })
 WorldSection:AddLabel("Kill Intensity"):AddSlider({ Min = 0.2, Max = 1, Default = 0.6, Step = 0.1, Callback = safeUi("Kill Effect Intensity", function(v) features.killEffects:SetSetting("intensity", v) end) })
 
-WorldSection:AddLabel("Anti Flash"):AddToggle({ Default = false, Callback = safeUi("Anti Flash", function(v) features.worldEffects:SetSetting("antiFlash", v) end) })
-WorldSection:AddLabel("Anti Smoke"):AddToggle({ Default = false, Callback = safeUi("Anti Smoke", function(v) features.worldEffects:SetSetting("antiSmoke", v) end) })
+WorldSection:AddLabel("Midnight Tint"):AddToggle({ Default = false, Callback = safeUi("Midnight Tint", function(v) features.worldVisuals:SetSetting("midnightTint", v) end) })
+WorldSection:AddLabel("Minimal Visuals"):AddToggle({ Default = false, Callback = safeUi("Minimal Visuals", function(v) features.worldVisuals:SetSetting("minimalVisuals", v) end) })
+WorldSection:AddLabel("Anti Flash"):AddToggle({ Default = false, Callback = safeUi("Anti Flash", function(v) features.worldVisuals:SetSetting("antiFlash", v) end) })
+WorldSection:AddLabel("Anti Smoke"):AddToggle({ Default = false, Callback = safeUi("Anti Smoke", function(v) features.worldVisuals:SetSetting("antiSmoke", v) end) })
+
+WorldSection:AddLabel("External View"):AddToggle({ Default = false, Callback = safeUi("External View", function(v) features.worldVisuals:SetSetting("externalView", v) end) })
+WorldSection:AddLabel("View Depth"):AddSlider({ Min = 5, Max = 25, Default = 8, Step = 1, Callback = safeUi("View Depth", function(v) features.worldVisuals:SetSetting("cameraDepth", v) end) })
+
+local ThreatSection = VisualsTab:AddSection({ Name = "THREATS", Position = 'right' })
+ThreatSection:AddLabel("Device Scanner"):AddToggle({ Default = false, Callback = safeUi("Device Scanner", function(v) features.threatVisuals:SetSetting("deviceScanner", v) end) })
+ThreatSection:AddLabel("Explosive Path"):AddToggle({ Default = false, Callback = safeUi("Explosive Path", function(v) features.threatVisuals:SetSetting("explosivePath", v) end) })
+ThreatSection:AddLabel("Gaze Indicators"):AddToggle({ Default = false, Callback = safeUi("Gaze Indicators", function(v) features.threatVisuals:SetSetting("gazeIndicators", v) end) })
+ThreatSection:AddLabel("Gaze Length"):AddSlider({ Min = 5, Max = 50, Default = 15, Step = 1, Callback = safeUi("Gaze Length", function(v) features.threatVisuals:SetSetting("indicatorReach", v) end) })
+
+local TracersSection = VisualsTab:AddSection({ Name = "BULLET TRACERS", Position = 'right' })
+local btLabel = TracersSection:AddLabel("Tracers Enabled")
+btLabel:AddToggle({
+    Default = false,
+    Callback = safeUi("Bullet Tracers Enabled", function(v) features.bulletTracers:SetSetting("enabled", v) end)
+})
+local btOpt = btLabel:AddOption()
+btOpt:AddLabel("Color"):AddColorPicker({
+    Default = Color3.fromRGB(0, 255, 255),
+    Callback = safeUi("Bullet Tracers Color", function(v) features.bulletTracers:SetSetting("color", v) end)
+})
+
+TracersSection:AddLabel("Pattern"):AddDropdown({
+    Values = {"Straight", "Wave", "Spiral", "Dashed"},
+    Default = "Straight",
+    Callback = safeUi("Bullet Tracers Pattern", function(v) features.bulletTracers:SetSetting("pattern", v) end)
+})
+TracersSection:AddLabel("Duration"):AddSlider({ Min = 0.1, Max = 3, Default = 0.6, Step = 0.1, Callback = safeUi("Bullet Tracers Duration", function(v) features.bulletTracers:SetSetting("duration", v) end) })
+TracersSection:AddLabel("Thickness"):AddSlider({ Min = 0.05, Max = 1, Default = 0.2, Step = 0.05, Callback = safeUi("Bullet Tracers Thickness", function(v) features.bulletTracers:SetSetting("thickness", v) end) })
+TracersSection:AddLabel("Transparency"):AddSlider({ Min = 0, Max = 1, Default = 0.3, Step = 0.05, Callback = safeUi("Bullet Tracers Transparency", function(v) features.bulletTracers:SetSetting("transparency", v) end) })
 
 
 local SkinSection = SkinsTab:AddSection({ Name = "SKINCHANGER", Position = 'left' })
@@ -404,8 +440,13 @@ for _, weaponName in ipairs(features.skinchanger:GetWeaponNames()) do
 end
 
 
-local MiscSection = MiscTab:AddSection({ Name = "MOVEMENT", Position = 'left' })
-MiscSection:AddLabel("Bunny Hop"):AddToggle({ Default = false, Callback = safeUi("Bunny Hop Enabled", function(v) features.bunnyHop:SetEnabled(v) end) })
+local MiscSection = MiscTab:AddSection({ Name = "PHYSICS", Position = 'left' })
+MiscSection:AddLabel("Enable Physics"):AddToggle({ Default = false, Callback = safeUi("Enable Physics", function(v) features.movement:SetEnabled(v) end) })
+MiscSection:AddLabel("Bunny Hop"):AddToggle({ Default = false, Callback = safeUi("Bunny Hop", function(v) features.movement:SetSetting("bunnyHop", v) end) })
+MiscSection:AddLabel("Aerial Glide"):AddToggle({ Default = false, Callback = safeUi("Aerial Glide", function(v) features.movement:SetSetting("aerialGlide", v) end) })
+MiscSection:AddLabel("Motion Scale"):AddSlider({ Min = 16, Max = 100, Default = 16, Step = 1, Callback = safeUi("Motion Scale", function(v) features.movement:SetSetting("motionScale", v) end) })
+MiscSection:AddLabel("Leap Force"):AddSlider({ Min = 25, Max = 100, Default = 25, Step = 1, Callback = safeUi("Leap Force", function(v) features.movement:SetSetting("leapForce", v) end) })
+MiscSection:AddLabel("Glide Velocity"):AddSlider({ Min = 16, Max = 50, Default = 16, Step = 1, Callback = safeUi("Glide Velocity", function(v) features.movement:SetSetting("glideVelocity", v) end) })
 
 window.UserSettings:AddLabel("Menu Keybind"):AddKeybind({ Default = 'RightShift', Callback = function(v) window.Keybind = v end })
 window.UserSettings:AddLabel("Menu Scale"):AddDropdown({ Values = {"Default", "Large", "Mobile", "Small"}, Default = "Default", Callback = function(v) window:SetSize(NeverLose.Scales[v]) end })
