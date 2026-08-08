@@ -314,14 +314,14 @@ local files = {
     "src/features/combat/TriggerBot.lua",
     "src/features/combat/Hitbox.lua",
     "src/features/combat/Rage.lua",
-    "src/features/movement/BunnyHop.lua",
+    "src/features/movement/Movement.lua",
     "src/features/skins/Skinchanger.lua",
     "src/features/visuals/ESP.lua",
     "src/features/visuals/Chams.lua",
     --"src/features/visuals/BulletTracers.lua",
-    --"src/features/visuals/ParticleEffects.lua",
     "src/features/visuals/KillEffects.lua",
-    "src/features/visuals/WorldEffects.lua",
+    "src/features/visuals/WorldVisuals.lua",
+    "src/features/visuals/ThreatVisuals.lua",
 }
 
 
