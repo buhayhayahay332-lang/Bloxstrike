@@ -1,5 +1,5 @@
 local DEFAULT_BASE_URL = "https://raw.githubusercontent.com/buhayhayahay332-lang/Bloxstrike/main"
-local WHITELIST_URL = "https://raw.githubusercontent.com/PLU3t0/Meathead/main/Bloxstrike/whitelist.lua"
+local WHITELIST_URL = "https://raw.githubusercontent.com/buhayhayahay332-lang/Bloxstrike/refs/heads/main/whitelist.lua"
 
 local function getFileName(path)
     local text = tostring(path or "")
